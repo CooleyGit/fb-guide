@@ -1,4 +1,5 @@
-import { motion, useTransform } from "motion/react";
+import { useEffect } from "react";
+import { animate, motion, useMotionValue, useMotionValueEvent } from "motion/react";
 import type { DerivedPlayer } from "../../types";
 import { DESIGN_SCALE, R } from "../../data/geometry";
 import { positionAt } from "../../anim/interpolate";
@@ -23,15 +24,38 @@ export function PlayerMarker({
   onActivate?: (player: DerivedPlayer) => void;
   interactive?: boolean;
 }) {
-  const { progress } = usePlayback();
+  const { progress, reduced } = usePlayback();
   const base = { x: player.x, y: player.y };
+  const frames = player.keyframes;
 
-  const x = useTransform(progress, (t) =>
-    (freeze ? positionAt(player.keyframes, 0, base) : positionAt(player.keyframes, t, base)).x * S,
-  );
-  const y = useTransform(progress, (t) =>
-    (freeze ? positionAt(player.keyframes, 0, base) : positionAt(player.keyframes, t, base)).y * S,
-  );
+  // The marker owns its position so that playback updates it frame-exactly,
+  // while a formation/selection change glides it to the new pre-snap spot.
+  const first = positionAt(frames, 0, base);
+  const mx = useMotionValue(first.x * S);
+  const my = useMotionValue(first.y * S);
+
+  // Follow the timeline exactly (no React re-render per frame).
+  useMotionValueEvent(progress, "change", (t) => {
+    const p = positionAt(frames, freeze ? 0 : t, base);
+    mx.set(p.x * S);
+    my.set(p.y * S);
+  });
+
+  // On selection change (progress is reset to 0), ease to the new alignment.
+  useEffect(() => {
+    const target = positionAt(frames, freeze ? 0 : progress.get(), base);
+    if (progress.get() === 0 && !reduced) {
+      const ax = animate(mx, target.x * S, { duration: 0.32, ease: "easeInOut" });
+      const ay = animate(my, target.y * S, { duration: 0.32, ease: "easeInOut" });
+      return () => {
+        ax.stop();
+        ay.stop();
+      };
+    }
+    mx.set(target.x * S);
+    my.set(target.y * S);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base.x, base.y, frames, freeze, reduced]);
 
   const isOffense = player.side === "offense";
   const r = player.isSS ? R.ss : R.defender;
@@ -52,7 +76,7 @@ export function PlayerMarker({
   return (
     <motion.g
       className={classes}
-      style={{ x, y }}
+      style={{ x: mx, y: my }}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
       aria-label={interactive ? `${describe(player)} — open tip` : undefined}
