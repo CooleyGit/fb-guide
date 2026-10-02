@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { animate, motion, useMotionValue, useMotionValueEvent } from "motion/react";
 import type { DerivedPlayer } from "../../types";
 import { DESIGN_SCALE, R } from "../../data/geometry";
-import { positionAt } from "../../anim/interpolate";
+import { positionAt, splinePositionAt } from "../../anim/interpolate";
 import { usePlayback } from "../../anim/playback";
 
 const S = DESIGN_SCALE;
@@ -34,16 +34,16 @@ export function PlayerMarker({
   const mx = useMotionValue(first.x * S);
   const my = useMotionValue(first.y * S);
 
-  // Follow the timeline exactly (no React re-render per frame).
+  // Follow the timeline exactly along the player's own spline (no re-render).
   useMotionValueEvent(progress, "change", (t) => {
-    const p = positionAt(frames, freeze ? 0 : t, base);
+    const p = splinePositionAt(frames, freeze ? 0 : t, base);
     mx.set(p.x * S);
     my.set(p.y * S);
   });
 
   // On selection change (progress is reset to 0), ease to the new alignment.
   useEffect(() => {
-    const target = positionAt(frames, freeze ? 0 : progress.get(), base);
+    const target = splinePositionAt(frames, freeze ? 0 : progress.get(), base);
     if (progress.get() === 0 && !reduced) {
       const ax = animate(mx, target.x * S, { duration: 0.32, ease: "easeInOut" });
       const ay = animate(my, target.y * S, { duration: 0.32, ease: "easeInOut" });

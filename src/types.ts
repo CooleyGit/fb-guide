@@ -74,16 +74,26 @@ export type PathKind = "ss" | "assignment" | "ball" | "ballFlight";
 export interface DerivedPath {
   id: string;
   kind: PathKind;
-  /** Quadratic control points: [start, control, end]. */
-  from: Point;
-  control: Point;
-  to: Point;
+  /** Waypoints the arrow (and the moving marker) follow — one shared spline. */
+  points: Point[];
   /** Fraction of the full timeline over which the path is "drawn". */
   phase: PhaseId;
   label?: { text: string; at: Point };
   /** True when the path exposes the defensive answer (hidden in study mode). */
   revealsAnswer: boolean;
 }
+
+export type FinishKind = "tackle" | "sack" | "none";
+
+export interface Finish {
+  at: Point;
+  label: string;
+  /** Normalized time at which the finish emphasis begins. */
+  from: number;
+  kind: FinishKind;
+}
+
+export type RunDirection = "strong" | "weak";
 
 export interface DerivedZone {
   x: number;
@@ -174,4 +184,10 @@ export interface Scenario {
   formationName: string;
   formationLean: string;
   formationWhy: string;
+  /** Convergence/finish emphasis (run/qb/blitz); undefined when none. */
+  finish?: Finish;
+  /** Which way the ball carrier went (run/qb). */
+  runDirection: RunDirection;
+  /** Short effort reminder shown with the rep. */
+  effortNote: string;
 }

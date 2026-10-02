@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useMotionValueEvent } from "motion/react";
 import type { Caption } from "../../types";
-import { usePlayback } from "../../anim/playback";
+import { SPEED_OPTIONS, usePlayback } from "../../anim/playback";
 import { PHASE_LABELS, PHASE_ORDER } from "../../anim/interpolate";
 
 export function PhaseChips() {
@@ -51,15 +51,15 @@ export function PlaybackControls() {
         </button>
         {!reduced && (
           <div className="speed-toggle" role="group" aria-label="Playback speed">
-            {([0.5, 1] as const).map((s) => (
+            {SPEED_OPTIONS.map((s) => (
               <button
-                key={s}
+                key={s.value}
                 type="button"
                 className="speed-button"
-                aria-pressed={speed === s}
-                onClick={() => setSpeed(s)}
+                aria-pressed={speed === s.value}
+                onClick={() => setSpeed(s.value)}
               >
-                {s === 1 ? "1×" : "0.5×"}
+                {s.label}
               </button>
             ))}
           </div>

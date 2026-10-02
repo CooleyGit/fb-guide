@@ -123,6 +123,18 @@ export const LESSONS: Lesson[] = [
     ],
   },
   {
+    id: "run-to-the-ball",
+    topic: "Beat blocks and pursue",
+    title: "Run to the ball. Finish every play.",
+    body: [
+      "Every snap, go. The ball can end up anywhere on the field, and the only way to help is to be there. Sprint to the ball on every play, no matter how far it starts from you.",
+      "Never assume a teammate will make the tackle. Run to finish: if he misses, you're the next man; if he makes it, you're there to help and nothing turns into a big gain.",
+      "When the play comes to you, keep your leverage, break down, wrap up, and finish. When it goes away, take a pursuit angle—aim ahead of the ball carrier to cut off his path instead of trailing behind him.",
+    ],
+    tryScenario: { call: "Power", side: "left", formation: "i", outcome: "run" },
+    tryLabel: "See contain and pursuit",
+  },
+  {
     id: "affect-throw",
     topic: "Beat blocks and pursue",
     title: "No sack? Still affect the throw.",

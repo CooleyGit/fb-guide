@@ -1,10 +1,19 @@
 import { motion, useTransform } from "motion/react";
-import type { DerivedPath, DerivedZone, Keyframe } from "../../types";
+import type { DerivedPath, DerivedZone, Finish, Keyframe, Point } from "../../types";
 import { DESIGN_SCALE } from "../../data/geometry";
-import { positionAt } from "../../anim/interpolate";
+import { splinePathData, splinePositionAt } from "../../anim/interpolate";
 import { usePlayback } from "../../anim/playback";
 
 const S = DESIGN_SCALE;
+
+function dedupe(points: Point[]): Point[] {
+  const out: Point[] = [];
+  for (const p of points) {
+    const prev = out[out.length - 1];
+    if (!prev || Math.abs(prev.x - p.x) > 0.01 || Math.abs(prev.y - p.y) > 0.01) out.push(p);
+  }
+  return out;
+}
 
 /** Stable arrowhead markers (ids referenced by paths). */
 export function PathDefs() {
@@ -47,9 +56,8 @@ export function AssignmentPath({
 }) {
   const marker =
     path.kind === "ss" ? "url(#arrow-ss)" : path.kind === "ball" ? "url(#arrow-ball)" : "url(#arrow-assignment)";
-  const d = `M ${path.from.x * S} ${path.from.y * S} Q ${path.control.x * S} ${path.control.y * S} ${
-    path.to.x * S
-  } ${path.to.y * S}`;
+  const d = splinePathData(path.points, S);
+  if (!d) return null;
   const cls = ["assignment-path", `kind-${path.kind}`, dim ? "dim" : "", highlighted ? "highlighted" : ""]
     .filter(Boolean)
     .join(" ");
@@ -93,27 +101,49 @@ export function CoverageArea({
   );
 }
 
-/** Static trajectory the ball travels (gray-blue); flight segment is dashed. */
+/** Static trajectory the ball travels (gray-blue); the thrown flight is dashed. */
 export function BallPath({ frames, flightFrom }: { frames: Keyframe[]; flightFrom?: number }) {
   if (frames.length < 2) return null;
-  const carry = frames.filter((f) => flightFrom === undefined || f.t <= flightFrom);
-  const flight = flightFrom !== undefined ? frames.filter((f) => f.t >= flightFrom) : [];
-  const toPts = (fs: Keyframe[]) => fs.map((f) => `${f.x * S},${f.y * S}`).join(" ");
+  const carry = dedupe(frames.filter((f) => flightFrom === undefined || f.t <= flightFrom).map((f) => ({ x: f.x, y: f.y })));
+  const flight = flightFrom !== undefined ? dedupe(frames.filter((f) => f.t >= flightFrom).map((f) => ({ x: f.x, y: f.y }))) : [];
+  const flightPts = flight.map((p) => `${p.x * S},${p.y * S}`).join(" ");
   return (
     <g className="ball-path" aria-hidden="true">
-      {carry.length >= 2 && <polyline points={toPts(carry)} fill="none" markerEnd={flight.length ? undefined : "url(#arrow-ball)"} />}
+      {carry.length >= 2 && (
+        <path d={splinePathData(carry, S)} fill="none" markerEnd={flight.length ? undefined : "url(#arrow-ball)"} />
+      )}
       {flight.length >= 2 && (
-        <polyline className="flight" points={toPts(flight)} fill="none" markerEnd="url(#arrow-ball)" />
+        <polyline className="flight" points={flightPts} fill="none" markerEnd="url(#arrow-ball)" />
       )}
     </g>
+  );
+}
+
+/** Impact emphasis where the SS meets the ball carrier (run/qb finish). */
+export function FinishBurst({ finish }: { finish: Finish }) {
+  const { progress } = usePlayback();
+  const opacity = useTransform(progress, [finish.from, finish.from + 0.06, 0.98, 1], [0, 1, 1, 0.9]);
+  const scale = useTransform(progress, [finish.from, 1], [0.4, 1.2]);
+  return (
+    <motion.g
+      className={`finish finish-${finish.kind}`}
+      transform={`translate(${finish.at.x * S} ${finish.at.y * S})`}
+      style={{ opacity }}
+      aria-hidden="true"
+    >
+      <motion.circle className="finish-ring" cx={0} cy={0} r={32} style={{ scale }} />
+      <text className="finish-label" x={0} y={-42} textAnchor="middle">
+        {finish.label}
+      </text>
+    </motion.g>
   );
 }
 
 export function BallMarker({ frames }: { frames: Keyframe[] }) {
   const { progress } = usePlayback();
   const fallback = { x: frames[0]?.x ?? 50, y: frames[0]?.y ?? 50 };
-  const x = useTransform(progress, (t) => positionAt(frames, t, fallback).x * S);
-  const y = useTransform(progress, (t) => positionAt(frames, t, fallback).y * S);
+  const x = useTransform(progress, (t) => splinePositionAt(frames, t, fallback).x * S);
+  const y = useTransform(progress, (t) => splinePositionAt(frames, t, fallback).y * S);
   return (
     <motion.g className="ball-marker" style={{ x, y }} aria-hidden="true">
       <ellipse cx={0} cy={0} rx={7} ry={11} transform="rotate(28)" />

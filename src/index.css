@@ -481,6 +481,59 @@ button {
   font-size: 15px;
   min-height: 42px;
 }
+.effort-note {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--maroon-dark);
+  background: var(--maroon-tint);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+/* Finish emphasis (tackle / sack) */
+.finish-ring {
+  fill: none;
+  stroke-width: 6;
+}
+.finish-tackle .finish-ring {
+  stroke: var(--ss);
+}
+.finish-sack .finish-ring {
+  stroke: var(--maroon);
+}
+.finish-label {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  fill: var(--maroon-dark);
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4px;
+}
+
+/* Run-direction control */
+.run-direction {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.run-direction .rd-label {
+  font-weight: 700;
+  color: var(--maroon-dark);
+}
+.run-direction .shuffle {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: 999px;
+  font-weight: 700;
+  color: var(--maroon-dark);
+  cursor: pointer;
+}
 
 /* --------------------------------------------------------- field toolbar */
 .field-toolbar {
@@ -1292,7 +1345,13 @@ details summary {
   .field-column .field-caption {
     order: 2;
   }
+  .field-column .effort-note {
+    order: 2;
+  }
   .field-column .playback-controls {
+    order: 3;
+  }
+  .field-column .run-direction {
     order: 3;
   }
   .field-column .field-toolbar {

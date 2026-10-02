@@ -64,4 +64,30 @@ test.describe("mobile screenshots", () => {
     await expect(page.locator(".kind-ss")).toHaveCount(0);
     await shot(page, "man-trips-left-hidden");
   });
+
+  const scrub = async (page: Page, value: number) => {
+    await page.$eval(
+      'input[type="range"]',
+      (el, v) => {
+        const input = el as HTMLInputElement;
+        input.value = String(v);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      },
+      value,
+    );
+    await page.waitForTimeout(250);
+  };
+
+  test("Power · I · left · run — tackle finish (strong)", async ({ page }) => {
+    await page.goto(go({ call: "Power", ball: "left", formation: "i", outcome: "run" }));
+    await scrub(page, 950);
+    await shot(page, "power-i-left-run-finish");
+  });
+
+  test("Power · I · left · run — pursuit angle (away)", async ({ page }) => {
+    await page.goto(go({ call: "Power", ball: "left", formation: "i", outcome: "run" }));
+    await page.getByRole("radio", { name: "Away from you" }).click();
+    await scrub(page, 760);
+    await shot(page, "power-i-left-run-weak");
+  });
 });

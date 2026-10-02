@@ -2,7 +2,7 @@ import type { DerivedPlayer, Hotspot, Scenario } from "../../types";
 import { DESIGN_SCALE } from "../../data/geometry";
 import { FootballField } from "./FootballField";
 import { PlayerMarker, SSGhost } from "./PlayerMarker";
-import { AssignmentPath, BallMarker, BallPath, CoverageArea, PathDefs } from "./FieldPaths";
+import { AssignmentPath, BallMarker, BallPath, CoverageArea, FinishBurst, PathDefs } from "./FieldPaths";
 import { HotspotPins } from "./Tips";
 
 const S = DESIGN_SCALE;
@@ -111,6 +111,9 @@ export function PlayField({
       })}
 
       <BallMarker frames={scenario.ballKeyframes} />
+
+      {/* Tackle / sack finish — the play ends with the SS making the play. */}
+      {scenario.finish && !hideAnswers && <FinishBurst finish={scenario.finish} />}
 
       {/* Coach view overlays (read key / force edge / coverage outline). */}
       {coachView && !hideAnswers && <CoachOverlays scenario={scenario} />}

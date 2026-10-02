@@ -31,7 +31,7 @@ function allPoints(s: Scenario): Point[] {
     pts.push({ x: pl.x, y: pl.y });
     pl.keyframes?.forEach((k: Keyframe) => pts.push({ x: k.x, y: k.y }));
   }
-  for (const path of s.paths) pts.push(path.from, path.control, path.to);
+  for (const path of s.paths) for (const p of path.points) pts.push(p);
   s.ballKeyframes.forEach((k) => pts.push({ x: k.x, y: k.y }));
   if (s.zone) pts.push({ x: s.zone.x, y: s.zone.y });
   return pts;
@@ -191,6 +191,37 @@ describe("outcome agreement", () => {
       expect(phases.has("read")).toBe(true);
       expect(phases.has("react")).toBe(true);
     }
+  });
+});
+
+describe("run finish and pursuit", () => {
+  it("ends a run (and a Power/Blitz keeper) with an SS finish", () => {
+    for (const sel of SELECTIONS) {
+      const s = deriveScenario(sel);
+      const expectFinish =
+        sel.outcome === "run" || (sel.outcome === "qb" && (sel.call === "Power" || sel.call === "Blitz"));
+      if (expectFinish) {
+        expect(s.finish, `finish ${JSON.stringify(sel)}`).toBeTruthy();
+      } else {
+        expect(s.finish, `no finish ${JSON.stringify(sel)}`).toBeUndefined();
+      }
+    }
+  });
+
+  it("takes a cross-field pursuit angle when the run goes away from the SS", () => {
+    const sel: Selection = { call: "Power", side: "left", formation: "i", outcome: "run" };
+    const strong = deriveScenario(sel, { runDirection: "strong" });
+    const weak = deriveScenario(sel, { runDirection: "weak" });
+    const ssEnd = (sc: typeof strong) => {
+      const ss = sc.players.find((p) => p.isSS)!;
+      return ss.keyframes![ss.keyframes!.length - 1]!;
+    };
+    // Strong: the SS finishes on his own side; weak: he crosses past center.
+    const strongEnd = ssEnd(strong);
+    const weakEnd = ssEnd(weak);
+    expect(Math.sign(strongEnd.x - strong.center)).toBe(strong.ssSign);
+    expect(Math.sign(weakEnd.x - weak.center)).toBe(-weak.ssSign);
+    expect(weak.finish!.at.x).not.toBe(strong.finish!.at.x);
   });
 });
 

@@ -13,9 +13,16 @@ import type { PhaseId } from "../types";
 import { phaseOf, phaseSeekTime } from "./interpolate";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 
-const BASE_DURATION = 3.2; // seconds for a 1x play-through
+// Seconds for a 1x ("Real time") play-through — tuned to feel like a real
+// snap-to-whistle rep. Slow-mo stretches it for teaching.
+const BASE_DURATION = 2.6;
 
-export type Speed = 0.5 | 1;
+export type Speed = number;
+
+export const SPEED_OPTIONS: { value: Speed; label: string }[] = [
+  { value: 0.4, label: "Slow-mo" },
+  { value: 1, label: "Real time" },
+];
 
 interface PlaybackValue {
   progress: MotionValue<number>;

@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { Hotspot, Scenario, Selection } from "../../types";
+import type { Hotspot, RunDirection, Scenario, Selection } from "../../types";
 import { deriveScenario } from "../../data/scenario";
 import { selectionKey, selectionToParams } from "../../state/validation";
 import { useAppState } from "../../state/AppState";
@@ -53,7 +53,8 @@ function PlayStudyInner({
   onToggleHide: () => void;
   onOpenLesson: (lessonId: string) => void;
 }) {
-  const scenario = useMemo(() => deriveScenario(selection), [selection]);
+  const [runDirection, setRunDirection] = useState<RunDirection>("strong");
+  const scenario = useMemo(() => deriveScenario(selection, { runDirection }), [selection, runDirection]);
   const { state, setPreference, addFavorite, removeFavorite, isFavorite } = useAppState();
   const prefs = state.preferences;
   const isMobile = useIsMobile();
@@ -238,7 +239,11 @@ function PlayStudyInner({
           />
           {field}
           <FieldCaption captions={scenario.captions} />
+          <p className="effort-note">{scenario.effortNote}</p>
           <PlaybackControls />
+          {scenario.finish && (
+            <RunDirectionControl value={runDirection} onChange={setRunDirection} />
+          )}
           <TipList
             scenario={scenario}
             hideAnswers={hideAnswers}
@@ -344,5 +349,36 @@ function TipList({
         ))}
       </ul>
     </details>
+  );
+}
+
+/** Which way the ball carrier goes, so the SS learns both contain and pursuit. */
+function RunDirectionControl({
+  value,
+  onChange,
+}: {
+  value: RunDirection;
+  onChange: (dir: RunDirection) => void;
+}) {
+  return (
+    <div className="run-direction">
+      <span className="rd-label">Ball goes:</span>
+      <div className="segmented-track" role="radiogroup" aria-label="Run direction">
+        <button type="button" className="segment" aria-checked={value === "strong"} role="radio" onClick={() => onChange("strong")}>
+          To your edge
+        </button>
+        <button type="button" className="segment" aria-checked={value === "weak"} role="radio" onClick={() => onChange("weak")}>
+          Away from you
+        </button>
+      </div>
+      <button
+        type="button"
+        className="shuffle"
+        onClick={() => onChange(Math.random() < 0.5 ? "strong" : "weak")}
+        aria-label="Shuffle run direction"
+      >
+        🎲 Mix it up
+      </button>
+    </div>
   );
 }
