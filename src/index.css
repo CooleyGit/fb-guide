@@ -124,6 +124,13 @@ button {
   gap: 2px;
   padding: 6px 10px 18px;
 }
+.brand-unit {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted-ink);
+}
 .brand-team {
   font-size: 10px;
   font-weight: 800;

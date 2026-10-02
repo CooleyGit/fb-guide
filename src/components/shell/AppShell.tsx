@@ -48,6 +48,7 @@ export function AppShell() {
 
       <nav className="nav-rail" aria-label="Main navigation">
         <div className="brand">
+          <span className="brand-unit">Defense</span>
           <span className="brand-team">TCU 4-2-5</span>
           <PositionMenu />
           <span className="brand-title">Own your edge.</span>
