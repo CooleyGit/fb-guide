@@ -6,9 +6,9 @@ export type DirectionMode = "random" | "strong" | "weak";
 // "At the snap" is gone — Replay already starts before the snap, so the choices
 // are the three things that actually happen with the ball.
 const OUTCOMES: { id: OutcomeId; label: string; Icon: () => React.ReactNode }[] = [
-  { id: "run", label: "Run", Icon: () => <RunIcon /> },
-  { id: "pass", label: "Pass", Icon: () => <PassIcon /> },
-  { id: "qb", label: "QB run", Icon: () => <QBRunIcon /> },
+  { id: "run", label: "Run", Icon: () => <RunIcon size={17} /> },
+  { id: "pass", label: "Pass", Icon: () => <PassIcon size={17} /> },
+  { id: "qb", label: "QB run", Icon: () => <QBRunIcon size={17} /> },
 ];
 
 const DIRECTIONS: { id: DirectionMode; label: string }[] = [
@@ -34,14 +34,14 @@ export function PlayVariation({
     <div className="play-variation">
       <div className="variation-row">
         <span className="variation-label">After the snap</span>
-        <div className="variation-outcomes" role="radiogroup" aria-label="What happens after the snap">
+        <div className="segmented-track" role="radiogroup" aria-label="What happens after the snap">
           {OUTCOMES.map((o) => (
             <button
               key={o.id}
               type="button"
               role="radio"
               aria-checked={outcome === o.id}
-              className="variation-outcome"
+              className="segment seg-icon"
               onClick={() => onOutcome(o.id)}
             >
               {o.Icon()}
@@ -70,7 +70,7 @@ export function PlayVariation({
               ))}
             </div>
             {directionMode === "random" && (
-              <span className="direction-hint">Picks a side each time you play — lock one to drill it.</span>
+              <span className="direction-hint">Picks a side each play — lock one to drill it.</span>
             )}
           </div>
         </div>

@@ -3,9 +3,9 @@ import { FORMATIONS, FORMATION_ORDER, buildOffense } from "../../data/formations
 import { NeutralIcon, PassIcon, RunIcon } from "./icons";
 
 const TENDENCY: Record<"run" | "pass" | "neutral", { word: string; Icon: () => React.ReactNode }> = {
-  run: { word: "Run-leaning", Icon: () => <RunIcon size={15} /> },
-  pass: { word: "Pass-leaning", Icon: () => <PassIcon size={15} /> },
-  neutral: { word: "Balanced", Icon: () => <NeutralIcon size={15} /> },
+  run: { word: "Run-leaning", Icon: () => <RunIcon size={19} /> },
+  pass: { word: "Pass-leaning", Icon: () => <PassIcon size={19} /> },
+  neutral: { word: "Balanced", Icon: () => <NeutralIcon size={19} /> },
 };
 
 const PREVIEW_W = 120;
@@ -63,7 +63,7 @@ export function FormationPicker({
           >
             <MiniFormation formation={id} />
             <span className="formation-card-name">{meta.name}</span>
-            <span className={`tendency tendency-${meta.tendency}`}>
+            <span className={`tendency-bar tendency-${meta.tendency}`}>
               {t.Icon()}
               <span className="tendency-word">{t.word}</span>
             </span>

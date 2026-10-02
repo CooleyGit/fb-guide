@@ -27,36 +27,51 @@ function ball(cx: number, cy: number, l = 5, h = 3.2) {
   );
 }
 
+// A simple open hand (palm + four fingers + thumb), fingers up.
+function openHand() {
+  return (
+    <>
+      <path d="M7.4 16 V11.2" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M10 15.4 V9.4" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M12.6 15.4 V9.4" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M15.2 16 V11.4" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M7.4 14.5 Q6.4 20.8 11.3 21 Q16 21.2 15.2 15" strokeWidth="1.9" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M7.5 16 L5.1 14.4" strokeWidth="1.9" strokeLinecap="round" />
+    </>
+  );
+}
+
 export function RunIcon({ size = 20 }: IconProps) {
-  // Ball driving forward on the ground.
+  // Ball tucked under the arm — secured and carried.
   return svg(
     size,
     <>
-      {ball(7, 13)}
-      <path d="M13.5 13 H20 M17.5 10.3 L20 13 L17.5 15.7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {ball(11, 14.5, 5.4, 3.4)}
+      <path d="M3.6 14.5 Q11 6.6 18.4 14.5" strokeWidth="2.1" strokeLinecap="round" />
     </>,
   );
 }
 
 export function PassIcon({ size = 20 }: IconProps) {
-  // Ball thrown on an arc through the air.
+  // Open hand releasing the ball — the throw.
   return svg(
     size,
     <>
-      <path d="M3 18 Q9 6 16 8.5" strokeWidth="1.5" strokeDasharray="1.5 3" strokeLinecap="round" />
-      <g transform="rotate(-32 16 7)">{ball(16, 7, 4.6, 3)}</g>
+      <g transform="rotate(-26 13 5.5)">{ball(13, 5.5, 4.2, 2.7)}</g>
+      {openHand()}
     </>,
   );
 }
 
 export function QBRunIcon({ size = 20 }: IconProps) {
-  // Ball on a scramble / keeper path.
+  // Ball tucked, then a scramble path — the keeper takes off.
   return svg(
     size,
     <>
-      {ball(6, 13)}
-      <path d="M12.5 13 C 14 9.5, 15.2 16.5, 17 12.5" strokeWidth="1.9" strokeLinecap="round" />
-      <path d="M17 12.5 L14.8 12.5 M17 12.5 L17.6 14.8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      {ball(7.5, 14.5, 4.4, 3)}
+      <path d="M2.8 14.5 Q7.5 8.4 12.2 14.5" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M13 14.5 C 14.6 10.8, 15.8 17.4, 17.8 13.4" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M17.8 13.4 L15.6 13.6 M17.8 13.4 L18.1 15.7" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
     </>,
   );
 }
@@ -66,10 +81,10 @@ export function NeutralIcon({ size = 20 }: IconProps) {
   return svg(
     size,
     <>
-      {ball(12, 12, 4.4, 2.9)}
+      {ball(12, 12, 4.6, 3)}
       <path
-        d="M5.5 12 H2.5 M4 10.6 L2.5 12 L4 13.4 M18.5 12 H21.5 M20 10.6 L21.5 12 L20 13.4"
-        strokeWidth="1.8"
+        d="M5.4 12 H2.4 M3.9 10.5 L2.4 12 L3.9 13.5 M18.6 12 H21.6 M20.1 10.5 L21.6 12 L20.1 13.5"
+        strokeWidth="1.9"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
