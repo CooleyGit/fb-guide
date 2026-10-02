@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { LearnIcon, PlaysIcon, PracticeIcon, SettingsIcon } from "./icons";
+import { ChevronIcon } from "../plays/icons";
 import { SettingsPanel } from "./SettingsPanel";
 import { CoachingReferences } from "../learn/CoachingReferences";
 
@@ -8,6 +9,18 @@ const NAV = [
   { to: "/plays", label: "Plays", Icon: PlaysIcon },
   { to: "/practice", label: "Practice", Icon: PracticeIcon },
   { to: "/learn", label: "Learn", Icon: LearnIcon },
+] as const;
+
+// Only Strong Safety is built today; the rest are stubbed for a future feature.
+const POSITIONS = [
+  { id: "SS", label: "SS - Strong Safety" },
+  { id: "FS", label: "FS - Free Safety" },
+  { id: "WS", label: "WS - Weak Safety" },
+  { id: "CB", label: "CB - Cornerback" },
+  { id: "M", label: "M - Mike LB" },
+  { id: "W", label: "W - Will LB" },
+  { id: "E", label: "E - Defensive End" },
+  { id: "N", label: "N - Nose / Tackle" },
 ] as const;
 
 export function AppShell() {
@@ -35,7 +48,8 @@ export function AppShell() {
 
       <nav className="nav-rail" aria-label="Main navigation">
         <div className="brand">
-          <span className="brand-team">TCU 4-2-5 · STRONG SAFETY</span>
+          <span className="brand-team">TCU 4-2-5</span>
+          <PositionMenu />
           <span className="brand-title">Own your edge.</span>
         </div>
         <ul>
@@ -75,6 +89,61 @@ export function AppShell() {
       </nav>
 
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </div>
+  );
+}
+
+/** Position selector (custom menu). Only Strong Safety is built today. */
+function PositionMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="position-menu" ref={ref}>
+      <button
+        type="button"
+        className="position-trigger"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        SS - Strong Safety
+        <ChevronIcon open={open} />
+      </button>
+      {open && (
+        <ul className="position-dropdown" role="menu" aria-label="Defensive position">
+          {POSITIONS.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={p.id === "SS"}
+                className={`position-item${p.id === "SS" ? " selected" : ""}`}
+                disabled={p.id !== "SS"}
+                onClick={() => setOpen(false)}
+              >
+                {p.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

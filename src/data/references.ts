@@ -31,6 +31,6 @@ export const REFERENCES: Reference[] = [
 export const SCOPE_NOTES: string[] = [
   "This is a personal learning guide, not an official school or TCU playbook. The diagrams isolate representative assignments rather than complete eleven-player calls.",
   "Power uses the run-support interpretation discussed while building the guide; the team’s exact definition has not been verified. These four study buttons are not advertised as four official TCU calls.",
-  "River = right, Laso = left, and the FS strength call are family-supplied team terminology. Confirm the coaches’ left/right viewpoint before applying those calls.",
+  "RIVER = right, LASO = left, and the FS strength call are family-supplied team terminology. Confirm the coaches’ left/right viewpoint before applying those calls.",
   "Your coaches’ actual call, coverage, alignment, leverage, read keys, and adjustments take priority. Learn and practice contact techniques with your coaches.",
 ];

@@ -2,7 +2,7 @@ import type { DerivedPlayer, Hotspot, Scenario } from "../../types";
 import { DESIGN_SCALE } from "../../data/geometry";
 import { FootballField } from "./FootballField";
 import { PlayerMarker, SSGhost } from "./PlayerMarker";
-import { AssignmentPath, BallMarker, BallPath, CoverageArea, FinishBurst, PathDefs } from "./FieldPaths";
+import { AssignmentPath, BallMarker, BallPath, CoverageArea, FinishBurst, PathDefs, PreSnapRead } from "./FieldPaths";
 import { HotspotPins } from "./Tips";
 
 const S = DESIGN_SCALE;
@@ -48,6 +48,10 @@ export function PlayField({
   const offense = scenario.players.filter((p) => p.side === "offense");
   const defense = scenario.players.filter((p) => p.side === "defense");
 
+  // The player your eyes start on (pre-snap read cue).
+  const readKey = scenario.players.find((p) => p.id === scenario.keyId);
+  const readKeyLabel = readKey ? (readKey.role === "TE" ? "WATCH THE TE" : `WATCH No. ${readKey.no ?? 2}`) : "";
+
   return (
     <>
       <PathDefs />
@@ -56,18 +60,26 @@ export function PlayField({
       {/* Coverage shading (defensive answer). */}
       {!hideAnswers && scenario.zone && <CoverageArea zone={scenario.zone} dim={isDim("ss")} showLabel={showLabels} />}
 
-      {/* Assignment arrows (SS orange + teammate maroon). */}
+      {/* Assignment arrows: read (yellow) → react (green) for the SS, maroon for
+          teammates/receiver routes. Each draws in sync with its player. */}
       {scenario.paths
         .filter((p) => !(hideAnswers && p.revealsAnswer))
-        .map((p) => (
-          <AssignmentPath
-            key={p.id}
-            path={p}
-            dim={p.kind === "ss" ? isDim("ss") : dimActive}
-            highlighted={p.kind === "ss" && isHi("ss")}
-            showLabel={showLabels && !hideAnswers}
-          />
-        ))}
+        .map((p) => {
+          const owner = scenario.players.find((pl) => `${pl.id}-path` === p.id);
+          return (
+            <AssignmentPath
+              key={p.id}
+              path={p}
+              frames={owner?.keyframes}
+              dim={p.kind === "ss" ? isDim("ss") : dimActive}
+              highlighted={p.kind === "ss" && isHi("ss")}
+              showLabel={showLabels && !hideAnswers}
+            />
+          );
+        })}
+
+      {/* Pre-snap: cue your eyes to the key before the play develops. */}
+      {!hideAnswers && readKey && <PreSnapRead at={{ x: readKey.x, y: readKey.y }} label={readKeyLabel} />}
 
       {/* Ball trajectory (hidden in study mode so it can't pre-reveal the play);
           the ball marker still animates when the athlete presses play. */}

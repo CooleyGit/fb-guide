@@ -94,6 +94,9 @@ export interface Finish {
 }
 
 export type RunDirection = "strong" | "weak";
+/** Where a completed pass goes: a curl or flat on your side, or across the
+ * field to the other side (which tests your pursuit angle). */
+export type PassTarget = "curl" | "flat" | "away";
 
 export interface DerivedZone {
   x: number;

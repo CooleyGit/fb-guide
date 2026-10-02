@@ -5,10 +5,10 @@ import type { SideId } from "../../types";
 const ORDER: SideId[] = ["right", "middle-right", "middle", "left"];
 
 const LABELS: Record<SideId, { main: string; note: string }> = {
-  right: { main: "Right hash", note: "strength left" },
-  "middle-right": { main: "Middle", note: "River · right" },
-  middle: { main: "Middle", note: "Laso · left" },
-  left: { main: "Left hash", note: "strength right" },
+  right: { main: "Right hash", note: "LASO · strength left" },
+  "middle-right": { main: "Middle", note: "RIVER · right" },
+  middle: { main: "Middle", note: "LASO · left" },
+  left: { main: "Left hash", note: "RIVER · strength right" },
 };
 
 /** Mini overhead strip: sidelines, both hashes, and the ball on its spot. */

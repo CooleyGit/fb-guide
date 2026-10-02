@@ -1,9 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { OutcomeId } from "../../types";
+import type { OutcomeId, PassTarget, RunDirection } from "../../types";
 import { PassIcon, QBRunIcon, RunIcon } from "../plays/icons";
-
-export type DirectionMode = "random" | "strong" | "weak";
 
 const OUTCOMES: { id: OutcomeId; label: string; Icon: (p: { size?: number }) => React.ReactNode }[] = [
   { id: "run", label: "Run", Icon: RunIcon },
@@ -11,50 +9,56 @@ const OUTCOMES: { id: OutcomeId; label: string; Icon: (p: { size?: number }) => 
   { id: "qb", label: "QB run", Icon: QBRunIcon },
 ];
 
-const DIRECTIONS: { id: DirectionMode; label: string }[] = [
-  { id: "random", label: "Random" },
+const DIRECTIONS: { id: RunDirection; label: string }[] = [
   { id: "strong", label: "To your edge" },
   { id: "weak", label: "Away from you" },
 ];
 
-const PANEL_WIDTH = 236;
+const PASS_TARGETS: { id: PassTarget; label: string }[] = [
+  { id: "curl", label: "Curl" },
+  { id: "flat", label: "Flat" },
+  { id: "away", label: "Other side" },
+];
 
-function outcomeMeta(outcome: OutcomeId) {
-  return OUTCOMES.find((o) => o.id === outcome) ?? OUTCOMES[0];
+function iconFor(outcome: OutcomeId) {
+  return (OUTCOMES.find((o) => o.id === outcome) ?? OUTCOMES[0]!).Icon;
 }
 
 /**
  * Bottom-right field control for the play variation (what happens after the
  * snap + which way the ball goes). The button shows the current outcome icon;
- * the panel opens up-and-left and is portaled so it is never clipped.
+ * the panel is portaled and opens up-and-left so it is never clipped. The
+ * "Ball goes" column opens to the right of the outcomes.
  */
 export function PlayMenu({
   outcome,
   onOutcome,
-  directionMode,
-  onDirectionMode,
+  direction,
+  onDirection,
+  passTarget,
+  onPassTarget,
   showDirection,
 }: {
   outcome: OutcomeId;
   onOutcome: (o: OutcomeId) => void;
-  directionMode: DirectionMode;
-  onDirectionMode: (d: DirectionMode) => void;
+  direction: RunDirection;
+  onDirection: (d: RunDirection) => void;
+  passTarget: PassTarget;
+  onPassTarget: (t: PassTarget) => void;
   showDirection: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ left: number; bottom: number; maxHeight: number } | null>(null);
-  const current = outcomeMeta(outcome)!;
+  const [pos, setPos] = useState<{ right: number; bottom: number; maxHeight: number } | null>(null);
+  const CurrentIcon = iconFor(outcome);
 
   const reposition = () => {
     const r = btnRef.current?.getBoundingClientRect();
     if (!r) return;
-    // Open up-and-to-the-right: the panel's left edge aligns with the button so
-    // it flows rightward and feels attached. Clamp if it would run off-screen.
-    const left = Math.max(8, Math.min(window.innerWidth - PANEL_WIDTH - 8, r.left));
+    const right = Math.max(8, window.innerWidth - r.right);
     const bottom = window.innerHeight - r.top + 8;
-    setPos({ left, bottom, maxHeight: Math.max(180, r.top - 16) });
+    setPos({ right, bottom, maxHeight: Math.max(180, r.top - 16) });
   };
 
   useLayoutEffect(() => {
@@ -95,53 +99,68 @@ export function PlayMenu({
         className={`field-menu-button play-menu-button outcome-${outcome}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Change the play — currently ${current.label}`}
+        aria-label={`Change the play — currently ${outcome}`}
         onClick={() => setOpen((o) => !o)}
       >
-        <current.Icon size={22} />
+        <CurrentIcon size={22} />
       </button>
       {open &&
         pos &&
         createPortal(
           <div
             ref={panelRef}
-            className="field-menu-panel play-menu-panel"
+            className={`field-menu-panel play-menu-panel${showDirection ? " two-col" : ""}`}
             role="menu"
             aria-label="Change the play"
-            style={{ left: pos.left, bottom: pos.bottom, maxHeight: pos.maxHeight }}
+            style={{ right: pos.right, bottom: pos.bottom, maxHeight: pos.maxHeight }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <p className="field-menu-group">After the snap</p>
-            {OUTCOMES.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                role="menuitemradio"
-                aria-checked={outcome === o.id}
-                className={`field-menu-item outcome-${o.id}`}
-                onClick={() => onOutcome(o.id)}
-              >
-                <o.Icon size={18} />
-                <span>{o.label}</span>
-              </button>
-            ))}
+            <div className="pm-col">
+              <p className="field-menu-group">After the snap</p>
+              {OUTCOMES.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={outcome === o.id}
+                  className={`field-menu-item outcome-${o.id}`}
+                  onClick={() => onOutcome(o.id)}
+                >
+                  <o.Icon size={18} />
+                  <span>{o.label}</span>
+                </button>
+              ))}
+            </div>
             {showDirection && (
-              <>
+              <div className="pm-col pm-col-direction">
                 <p className="field-menu-group">Ball goes</p>
-                {DIRECTIONS.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={directionMode === d.id}
-                    className="field-menu-item"
-                    onClick={() => onDirectionMode(d.id)}
-                  >
-                    <span>{d.label}</span>
-                  </button>
-                ))}
-                {directionMode === "random" && <p className="menu-hint">Picks a side each play.</p>}
-              </>
+                {outcome === "pass"
+                  ? PASS_TARGETS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={passTarget === t.id}
+                        className="field-menu-item"
+                        onClick={() => onPassTarget(t.id)}
+                      >
+                        <span>{t.label}</span>
+                      </button>
+                    ))
+                  : DIRECTIONS.map((d) => (
+                      <button
+                        key={d.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={direction === d.id}
+                        className="field-menu-item"
+                        onClick={() => onDirection(d.id)}
+                      >
+                        <span>{d.label}</span>
+                      </button>
+                    ))}
+                <p className="menu-hint">↻ shuffles a new rep.</p>
+              </div>
             )}
           </div>,
           document.body,

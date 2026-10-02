@@ -86,22 +86,31 @@ export function FootballField() {
         Defense above · offense below
       </text>
 
-      {/* Screen-left sideline is the defender's RIGHT; screen-right is his LEFT. */}
+      {/* Short yard ticks along each sideline. */}
+      {YARD_ROWS.map((row) => (
+        <g key={`sidetick-${row}`}>
+          <line className="sideline-tick" x1={D(X.leftSideline)} x2={D(X.leftSideline) + 9} y1={D(row)} y2={D(row)} />
+          <line className="sideline-tick" x1={D(X.rightSideline) - 9} x2={D(X.rightSideline)} y1={D(row)} y2={D(row)} />
+        </g>
+      ))}
+
+      {/* Sideline labels, centered vertically on the LOS. Screen-left sideline is
+          the defender's RIGHT; screen-right is his LEFT. */}
       <text
         className="boundary-label"
         x={D(X.leftSideline) - 16}
-        y={D(42)}
+        y={D(Y.los)}
         textAnchor="middle"
-        transform={`rotate(-90 ${D(X.leftSideline) - 16} ${D(42)})`}
+        transform={`rotate(-90 ${D(X.leftSideline) - 16} ${D(Y.los)})`}
       >
         YOUR RIGHT SIDELINE
       </text>
       <text
         className="boundary-label"
         x={D(X.rightSideline) + 16}
-        y={D(42)}
+        y={D(Y.los)}
         textAnchor="middle"
-        transform={`rotate(90 ${D(X.rightSideline) + 16} ${D(42)})`}
+        transform={`rotate(90 ${D(X.rightSideline) + 16} ${D(Y.los)})`}
       >
         YOUR LEFT SIDELINE
       </text>

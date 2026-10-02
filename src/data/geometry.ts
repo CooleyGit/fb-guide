@@ -41,7 +41,7 @@ export const Y = {
   rbDeep: 79,
   backfield: 73,
   fieldBottom: 90,
-  hashLabel: 95,
+  hashLabel: 88,
 } as const;
 
 // Horizontal landmarks (logical x).

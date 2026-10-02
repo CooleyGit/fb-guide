@@ -1,6 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { Hotspot, RunDirection, Scenario, Selection } from "../../types";
+import type { Hotspot, OutcomeId, PassTarget, RunDirection, Scenario, Selection } from "../../types";
 import { deriveScenario } from "../../data/scenario";
+import { CALL_ORDER } from "../../data/calls";
+import { SIDE_ORDER } from "../../data/sides";
+import { FORMATION_ORDER, FORMATIONS } from "../../data/formations";
 import { selectionKey, selectionToParams } from "../../state/validation";
 import { useAppState } from "../../state/AppState";
 import type { FieldView } from "../../state/storage";
@@ -10,21 +13,111 @@ import { FieldViewport } from "../field/FieldViewport";
 import { FieldViewMenu, type ViewMenuExtra } from "../field/FieldViewMenu";
 import { PlayField } from "../field/PlayField";
 import { TipPopover, TipSheet } from "../field/Tips";
-import { FieldCaption, PlaybackControls } from "../field/PlaybackControls";
+import { FieldCaption, FieldTransport, PlaybackScrubber } from "../field/PlaybackControls";
 import { PlayControls } from "./PlayControls";
-import { PlayMenu, type DirectionMode } from "../field/PlayMenu";
+import { PlayMenu } from "../field/PlayMenu";
 import { SelectedPlayNotes } from "./SelectedPlayNotes";
 import { Toast, useToast } from "../common/Toast";
-import { ChevronIcon, CoachIcon, EyeIcon, EyeOffIcon, GhostIcon, LinkIcon, PanelIcon, StarIcon } from "./icons";
+import {
+  ChevronIcon,
+  CoachIcon,
+  EyeIcon,
+  EyeOffIcon,
+  GhostIcon,
+  LinkIcon,
+  NeutralIcon,
+  PanelIcon,
+  PassIcon,
+  PlaybookIcon,
+  QBRunIcon,
+  RunIcon,
+  StarIcon,
+} from "./icons";
+
+function pick<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)]!;
+}
+
+function showsDirection(selection: Selection): boolean {
+  return (
+    selection.outcome === "run" ||
+    selection.outcome === "pass" ||
+    (selection.outcome === "qb" && (selection.call === "Power" || selection.call === "Blitz"))
+  );
+}
+
+const OUTCOME_TEXT: Record<OutcomeId, string> = { read: "At the snap", run: "Run", pass: "Pass", qb: "QB run" };
+const OUTCOME_ICON: Record<OutcomeId, (p: { size?: number }) => React.ReactNode> = {
+  read: RunIcon,
+  run: RunIcon,
+  pass: PassIcon,
+  qb: QBRunIcon,
+};
+
+const PASS_TARGET_TEXT: Record<PassTarget, string> = { curl: "curl", flat: "flat", away: "other side" };
+
+type Tendency = "run" | "pass" | "neutral";
+const LEAN_TEXT: Record<Tendency, string> = { run: "Run-leaning", pass: "Pass-leaning", neutral: "Balanced" };
+const LEAN_ICON: Record<Tendency, (p: { size?: number }) => React.ReactNode> = {
+  run: RunIcon,
+  pass: PassIcon,
+  neutral: NeutralIcon,
+};
+
+/**
+ * The RUN/PASS pill. Before the snap you don't know yet, so it shows the
+ * formation's lean (grayed). Once the play develops in the read step it
+ * resolves to the actual run/pass (and direction) it ended up being.
+ */
+function OutcomePill({
+  outcome,
+  direction,
+  passTarget,
+  showDirection,
+  tendency,
+}: {
+  outcome: OutcomeId;
+  direction: RunDirection;
+  passTarget: PassTarget;
+  showDirection: boolean;
+  tendency: Tendency;
+}) {
+  const { phase } = usePlayback();
+  if (phase === "before") {
+    const Icon = LEAN_ICON[tendency];
+    return (
+      <span className="chip outcome-chip lean">
+        <Icon size={14} />
+        {LEAN_TEXT[tendency]}
+      </span>
+    );
+  }
+  const Icon = OUTCOME_ICON[outcome];
+  const detail = !showDirection
+    ? ""
+    : outcome === "pass"
+      ? ` · ${PASS_TARGET_TEXT[passTarget]}`
+      : ` · ${direction === "strong" ? "to your edge" : "away"}`;
+  return (
+    <span className={`chip outcome-chip outcome-${outcome}`}>
+      <Icon size={14} />
+      {OUTCOME_TEXT[outcome]}
+      {detail}
+    </span>
+  );
+}
 
 const rollDirection = (): RunDirection => (Math.random() < 0.5 ? "strong" : "weak");
 
-const SIDE_PILL: Record<Selection["side"], string> = {
-  left: "Left hash",
-  right: "Right hash",
-  middle: "Middle · Laso",
-  "middle-right": "Middle · River",
-};
+// Weighted outcome for a shuffle: QB keeper/scramble is rare, otherwise the
+// formation's lean makes run or pass more likely (balanced = 50/50).
+const QB_CHANCE = 0.08;
+function rollOutcome(formation: Selection["formation"]): OutcomeId {
+  if (Math.random() < QB_CHANCE) return "qb";
+  const tendency = FORMATIONS[formation].tendency;
+  const runProb = tendency === "run" ? 0.66 : tendency === "pass" ? 0.34 : 0.5;
+  return Math.random() < runProb ? "run" : "pass";
+}
 
 export function PlayStudy({
   selection,
@@ -40,7 +133,9 @@ export function PlayStudy({
   onOpenLesson: (lessonId: string) => void;
 }) {
   return (
-    <PlaybackProvider resetKey={selectionKey(selection) + (hideAnswers ? ":hide" : "")}>
+    <PlaybackProvider
+      resetKey={`${selection.call}|${selection.side}|${selection.formation}${hideAnswers ? ":hide" : ""}`}
+    >
       <PlayStudyInner
         selection={selection}
         onChange={onChange}
@@ -65,13 +160,16 @@ function PlayStudyInner({
   onToggleHide: () => void;
   onOpenLesson: (lessonId: string) => void;
 }) {
-  const [directionMode, setDirectionMode] = useState<DirectionMode>("random");
   const [runDirection, setRunDirection] = useState<RunDirection>(rollDirection);
-  const scenario = useMemo(() => deriveScenario(selection, { runDirection }), [selection, runDirection]);
+  const [passTarget, setPassTarget] = useState<PassTarget>("curl");
+  const scenario = useMemo(
+    () => deriveScenario(selection, { runDirection, passTarget }),
+    [selection, runDirection, passTarget],
+  );
   const { state, setPreference, addFavorite, removeFavorite, isFavorite } = useAppState();
   const prefs = state.preferences;
   const isMobile = useIsMobile();
-  const { pause, seek } = usePlayback();
+  const { pause, seek, replay } = usePlayback();
 
   const [mode, setMode] = useState<FieldView>(prefs.fieldView);
   const [resetSignal, setResetSignal] = useState(0);
@@ -82,14 +180,48 @@ function PlayStudyInner({
   const [controlsOpen, setControlsOpen] = useState(!isMobile);
   const [notesOpen, setNotesOpen] = useState(true);
   const [toast, showToast] = useToast();
+  // The orientation note shows briefly on load, then fades out.
+  const [viewpointPhase, setViewpointPhase] = useState<"in" | "out" | "gone">("in");
+  useEffect(() => {
+    const t = setTimeout(() => setViewpointPhase("out"), 5000);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (viewpointPhase !== "out") return;
+    const t = setTimeout(() => setViewpointPhase("gone"), 450);
+    return () => clearTimeout(t);
+  }, [viewpointPhase]);
 
-  const chooseDirection = (m: DirectionMode) => {
-    setDirectionMode(m);
-    setRunDirection(m === "random" ? rollDirection() : m);
+  // Picking an outcome / ball direction / pass target plays the new rep right
+  // away (none of these change the resetKey, so replay isn't cancelled).
+  const chooseOutcome = (o: OutcomeId) => {
+    onChange({ outcome: o });
+    replay();
   };
-  // A fresh play-through re-rolls the direction when it's left on Random.
+  const chooseDirection = (d: RunDirection) => {
+    setRunDirection(d);
+    replay();
+  };
+  const choosePassTarget = (t: PassTarget) => {
+    setPassTarget(t);
+    replay();
+  };
+  // The refresh button shuffles a NEW rep: an outcome weighted by this
+  // formation's lean (QB keeper rare), plus a fresh ball direction/target. The
+  // play button just replays the current rep.
   const handleRestart = () => {
-    if (directionMode === "random") setRunDirection(rollDirection());
+    onChange({ outcome: rollOutcome(selection.formation) });
+    setRunDirection(rollDirection());
+    setPassTarget(pick(["curl", "flat", "away"] as const));
+  };
+  // Shuffle the whole scenario: new call, ball/strength, and formation, with the
+  // outcome weighted by the new formation's lean. It lands pre-snap (paused) so
+  // you can set your eyes, then press play.
+  const shuffleSelection = () => {
+    const formation = pick(FORMATION_ORDER);
+    onChange({ call: pick(CALL_ORDER), side: pick(SIDE_ORDER), formation, outcome: rollOutcome(formation) });
+    setRunDirection(rollDirection());
+    setPassTarget(pick(["curl", "flat", "away"] as const));
   };
   const invokerRef = useRef<HTMLElement | SVGElement | null>(null);
   const descId = useId();
@@ -191,10 +323,6 @@ function PlayStudyInner({
     { id: "hide", label: hideAnswers ? "Show answers" : "Hide answers", icon: <EyeOffIcon />, active: hideAnswers, onClick: onToggleHide },
     { id: "coach", label: "Coach view", icon: <CoachIcon />, active: prefs.coachView, onClick: () => setPreference({ coachView: !prefs.coachView }) },
     { id: "ghost", label: "SS ghost trail", icon: <GhostIcon />, active: prefs.ghost, onClick: () => setPreference({ ghost: !prefs.ghost }) },
-    // Collapsing the notes panel (desktop) gives the field the full width.
-    ...(isMobile
-      ? []
-      : [{ id: "notes", label: "Notes panel", icon: <PanelIcon />, active: notesOpen, onClick: () => setNotesOpen((o) => !o) }]),
   ];
 
   const field = (
@@ -205,22 +333,50 @@ function PlayStudyInner({
       resetSignal={resetSignal}
       overlay={
         <>
+          <div className="field-shuffle" onPointerDown={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="field-menu-button"
+              aria-label="New call — shuffle the assignment, ball, and formation"
+              title="New call (shuffle)"
+              onClick={shuffleSelection}
+            >
+              <PlaybookIcon size={20} />
+            </button>
+          </div>
           <FieldViewMenu
             mode={mode}
             onMode={setFieldView}
             onReset={() => {
-              setFieldView("detail");
+              setFieldView("fit");
               setResetSignal((n) => n + 1);
             }}
             extras={viewExtras}
           />
+          {!isMobile && (
+            <div className="notes-toggle" onPointerDown={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="field-menu-button"
+                aria-pressed={notesOpen}
+                aria-label={notesOpen ? "Hide the notes panel" : "Show the notes panel"}
+                title={notesOpen ? "Hide notes panel" : "Show notes panel"}
+                onClick={() => setNotesOpen((o) => !o)}
+              >
+                <PanelIcon />
+              </button>
+            </div>
+          )}
           <PlayMenu
             outcome={selection.outcome}
-            onOutcome={(o) => onChange({ outcome: o })}
-            directionMode={directionMode}
-            onDirectionMode={chooseDirection}
-            showDirection={!!scenario.finish}
+            onOutcome={chooseOutcome}
+            direction={runDirection}
+            onDirection={chooseDirection}
+            passTarget={passTarget}
+            onPassTarget={choosePassTarget}
+            showDirection={showsDirection(selection)}
           />
+          <FieldTransport onRestart={handleRestart} />
           {tipProps ? isMobile ? <TipSheet {...tipProps} /> : <TipPopover {...tipProps} /> : null}
         </>
       }
@@ -243,6 +399,12 @@ function PlayStudyInner({
       <p id={descId} className="visually-hidden">
         {scenario.textEquivalent}
       </p>
+      {viewpointPhase !== "gone" && (
+        <div className={`viewpoint-banner${viewpointPhase === "out" ? " out" : ""}`} role="note">
+          Overhead view · defense on top. Your <strong>right</strong> is screen-left; your <strong>left</strong> is
+          screen-right.
+        </div>
+      )}
       <div className="scenario-head">
         <h2 className="scenario-title">{scenario.scenarioTitle}</h2>
         <p className="scenario-sub" aria-live="polite">
@@ -253,8 +415,14 @@ function PlayStudyInner({
       <div className="selection-summary">
         <div className="summary-pills">
           <span className="chip">{selection.call}</span>
-          <span className="chip">{scenario.formationName}</span>
-          <span className="chip">{SIDE_PILL[selection.side]}</span>
+          <span className="chip">{scenario.ssSide === "RIGHT" ? "RIVER" : "LASO"}</span>
+          <OutcomePill
+            outcome={selection.outcome}
+            direction={runDirection}
+            passTarget={passTarget}
+            showDirection={showsDirection(selection)}
+            tendency={FORMATIONS[selection.formation].tendency}
+          />
         </div>
         <button
           type="button"
@@ -275,13 +443,9 @@ function PlayStudyInner({
 
       <div className={`study-grid${notesOpen ? "" : " notes-hidden"}`}>
         <div className="field-column">
-          <p className="viewpoint-note">
-            Overhead view · defense on top. Your <strong>right</strong> is screen-left; your <strong>left</strong> is
-            screen-right.
-          </p>
-          {field}
           <FieldCaption captions={scenario.captions} />
-          <PlaybackControls onRestart={handleRestart} />
+          {field}
+          <PlaybackScrubber />
           <p className="effort-note">{scenario.effortNote}</p>
           <div className="field-actions">
             <button type="button" className="action-chip" aria-pressed={favorite} onClick={toggleFavorite}>

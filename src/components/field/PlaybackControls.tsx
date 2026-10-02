@@ -3,8 +3,65 @@ import { useMotionValueEvent } from "motion/react";
 import type { Caption } from "../../types";
 import { SPEED_OPTIONS, usePlayback } from "../../anim/playback";
 import { PHASE_LABELS, PHASE_ORDER } from "../../anim/interpolate";
+import { PauseIcon, PlayIcon, ReplayIcon } from "../plays/icons";
 
-export function PhaseChips() {
+/** In-field transport: play/pause (replays the same play when done), a refresh
+ * that randomizes a new rep, and the speed toggle. */
+export function FieldTransport({ onRestart }: { onRestart?: () => void }) {
+  const { progress, isPlaying, play, pause, replay, seek, speed, setSpeed, reduced } = usePlayback();
+
+  const onPlay = () => {
+    if (isPlaying) {
+      pause();
+      return;
+    }
+    if (reduced) {
+      seek(progress.get() >= 1 ? 0 : 1);
+      return;
+    }
+    if (progress.get() >= 1) replay();
+    else play();
+  };
+
+  const onRefresh = () => {
+    onRestart?.();
+    if (reduced) seek(0);
+    else replay();
+  };
+
+  return (
+    <div className="field-transport" onPointerDown={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className="transport-icon primary"
+        onClick={onPlay}
+        aria-label={isPlaying ? "Pause" : reduced ? "Show the play" : "Play"}
+      >
+        {isPlaying ? <PauseIcon /> : <PlayIcon />}
+      </button>
+      <button type="button" className="transport-icon" onClick={onRefresh} aria-label="New rep">
+        <ReplayIcon />
+      </button>
+      {!reduced && (
+        <div className="speed-toggle" role="group" aria-label="Playback speed">
+          {SPEED_OPTIONS.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              className="speed-button"
+              aria-pressed={speed === s.value}
+              onClick={() => setSpeed(s.value)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PhaseChips() {
   const { phase, seekPhase } = usePlayback();
   return (
     <div className="phase-chips" role="group" aria-label="Play phases">
@@ -25,28 +82,12 @@ export function PhaseChips() {
   );
 }
 
-export function PlaybackControls({ onRestart }: { onRestart?: () => void } = {}) {
-  const { progress, isPlaying, play, pause, replay, seek, speed, setSpeed, reduced } = usePlayback();
+/** Below-field scrubber + phase chips. */
+export function PlaybackScrubber() {
+  const { progress, seek } = usePlayback();
   const scrubRef = useRef<HTMLInputElement>(null);
   const dragging = useRef(false);
 
-  // A fresh play-through (replay, or play from the start/end) can re-roll a
-  // randomized play variation; resuming from a pause does not.
-  const playToggle = () => {
-    if (isPlaying) {
-      pause();
-      return;
-    }
-    const p = progress.get();
-    if (p === 0 || p >= 1) onRestart?.();
-    play();
-  };
-  const replayFromStart = () => {
-    onRestart?.();
-    replay();
-  };
-
-  // Reflect the motion value into the range input without re-rendering per frame.
   useMotionValueEvent(progress, "change", (v) => {
     if (!dragging.current && scrubRef.current) {
       scrubRef.current.value = String(Math.round(v * 1000));
@@ -57,32 +98,7 @@ export function PlaybackControls({ onRestart }: { onRestart?: () => void } = {})
   }, [progress]);
 
   return (
-    <div className="playback-controls">
-      <div className="transport">
-        {!reduced && (
-          <button type="button" className="transport-button primary" onClick={playToggle} aria-label={isPlaying ? "Pause" : "Play"}>
-            {isPlaying ? "❚❚ Pause" : "▶ Play"}
-          </button>
-        )}
-        <button type="button" className="transport-button" onClick={replayFromStart} aria-label="Replay from the start">
-          ↻ {reduced ? "Reset" : "Replay"}
-        </button>
-        {!reduced && (
-          <div className="speed-toggle" role="group" aria-label="Playback speed">
-            {SPEED_OPTIONS.map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                className="speed-button"
-                aria-pressed={speed === s.value}
-                onClick={() => setSpeed(s.value)}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="playback-scrubber">
       <label className="scrubber">
         <span className="visually-hidden">Play progress</span>
         <input

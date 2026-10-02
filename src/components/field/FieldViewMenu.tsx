@@ -12,8 +12,8 @@ export interface ViewMenuExtra {
 }
 
 const VIEWS: { mode: FieldView; label: string; icon: ReactNode }[] = [
-  { mode: "detail", label: "Readable detail", icon: <DetailIcon /> },
   { mode: "fit", label: "Whole field", icon: <FitIcon /> },
+  { mode: "detail", label: "Readable detail", icon: <DetailIcon /> },
   { mode: "focus", label: "Focus the SS", icon: <FocusIcon /> },
 ];
 

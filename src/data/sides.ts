@@ -6,7 +6,7 @@ export interface SideMeta {
   /** True when the ball is in the middle (FS declares strength). */
   middle: boolean;
   /** FS strength call that applies on a middle ball, if any. */
-  fsCall?: "River" | "Laso";
+  fsCall?: "RIVER" | "LASO";
 }
 
 export const SIDES: Record<SideId, SideMeta> = {
@@ -17,15 +17,15 @@ export const SIDES: Record<SideId, SideMeta> = {
   },
   middle: {
     id: "middle",
-    option: "Middle · Laso (left)",
+    option: "Middle · LASO (left)",
     middle: true,
-    fsCall: "Laso",
+    fsCall: "LASO",
   },
   "middle-right": {
     id: "middle-right",
-    option: "Middle · River (right)",
+    option: "Middle · RIVER (right)",
     middle: true,
-    fsCall: "River",
+    fsCall: "RIVER",
   },
   right: {
     id: "right",

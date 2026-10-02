@@ -57,7 +57,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   { term: "Screen", definition: "A short pass with blockers in front." },
   { term: "QB keeper", definition: "The quarterback keeps the ball instead of handing it off." },
   { term: "Scramble", definition: "The QB leaves the pocket during a pass play and may still throw." },
-  { term: "River / Laso", definition: "Family-supplied strength terms: River means right, Laso means left (defender’s view)." },
+  { term: "RIVER / LASO", definition: "Family-supplied strength terms: RIVER means right, LASO means left (defender’s view)." },
   {
     term: "SS / WS / FS",
     definition: "Strong safety (you), weak safety, and free safety. The FS makes the strength call when it isn’t obvious.",

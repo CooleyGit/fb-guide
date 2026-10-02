@@ -195,11 +195,15 @@ describe("outcome agreement", () => {
 });
 
 describe("run finish and pursuit", () => {
-  it("ends a run (and a Power/Blitz keeper) with an SS finish", () => {
+  it("finishes a run, a Power/Blitz keeper, and covered passes (not a Blitz rush)", () => {
     for (const sel of SELECTIONS) {
       const s = deriveScenario(sel);
       const expectFinish =
-        sel.outcome === "run" || (sel.outcome === "qb" && (sel.call === "Power" || sel.call === "Blitz"));
+        sel.outcome === "run" ||
+        (sel.outcome === "qb" && (sel.call === "Power" || sel.call === "Blitz")) ||
+        // Passes end with the SS breaking on and covering the ball—except a
+        // Blitz, where the SS is rushing the edge instead of in coverage.
+        (sel.outcome === "pass" && sel.call !== "Blitz");
       if (expectFinish) {
         expect(s.finish, `finish ${JSON.stringify(sel)}`).toBeTruthy();
       } else {

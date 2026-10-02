@@ -7,6 +7,7 @@ import type {
   Finish,
   Hotspot,
   Keyframe,
+  PassTarget,
   Point,
   RunDirection,
   Scenario,
@@ -16,7 +17,7 @@ import type {
 import { CALLS, OUTCOME_GUIDE, OUTCOME_NOTES } from "./calls";
 import { FORMATIONS, buildOffense } from "./formations";
 import { SIDES } from "./sides";
-import { X, Y, sideToCenter, sideToSsSign, ssSideLabel } from "./geometry";
+import { X, Y, clampX, sideToCenter, sideToSsSign, ssSideLabel } from "./geometry";
 
 // Timeline phase boundaries (normalized 0..1). The snap is quick: the ball
 // moves almost immediately after Play, then the read and reaction develop.
@@ -142,6 +143,7 @@ function buildMotion(
   offense: DerivedPlayer[],
   keyId: string,
   runDirection: RunDirection,
+  passTarget: PassTarget,
 ): Motion {
   const { call, outcome, formation } = selection;
   const paths: DerivedPath[] = [];
@@ -159,8 +161,19 @@ function buildMotion(
   const align2: Point = { x: align.x, y: align.y };
   const meshPoint: Point = { x: c + sign * 2, y: qb.y - 2 };
 
-  // d = lateral direction the ball carrier actually goes (+ toward SS = strong).
-  const d: 1 | -1 = runDirection === "strong" ? sign : ((-sign) as 1 | -1);
+  // Which curl/flat route the completed pass takes on your side (ignored when
+  // the ball goes away to the other side).
+  const passVariant: "curl" | "flat" = passTarget === "flat" ? "flat" : "curl";
+  // d = lateral direction the ball actually goes (+ toward SS = strong). A pass
+  // "away" sends it to the other side; curl/flat stay on your side.
+  const d: 1 | -1 =
+    outcome === "pass"
+      ? passTarget === "away"
+        ? ((-sign) as 1 | -1)
+        : sign
+      : runDirection === "strong"
+        ? sign
+        : ((-sign) as 1 | -1);
 
   const setSS = (frames: Keyframe[], label?: string, labelAt?: Point) => {
     playerKeyframes["ss"] = frames;
@@ -223,6 +236,86 @@ function buildMotion(
     };
   };
 
+  // Offense blocks the run: the line fires off toward the play, the backside
+  // guard pulls to lead, and the fullback kicks out / leads through the hole.
+  // (Blockers move but are not drawn as arrows—only the SS and the key are.)
+  const addRunBlocking = (isSweep: boolean) => {
+    for (const id of ["ol-lt", "ol-lg", "c", "ol-rg", "ol-rt"]) {
+      const p = byId(id);
+      if (!p || p.id === keyId) continue;
+      const playside = (p.x - c) * d >= 0;
+      const drive = playside ? 2.6 : 1.2;
+      playerKeyframes[id] = fromAlign(
+        { x: p.x, y: p.y },
+        [HOLE, p.x + d * drive * 0.5, Y.ol - 0.6],
+        [1, p.x + d * drive, Y.ol - 1.3],
+      );
+    }
+    // Backside guard pulls across to lead through the hole (or around on a sweep).
+    const pullId = d > 0 ? "ol-lg" : "ol-rg";
+    const pg = byId(pullId);
+    if (pg && pg.id !== keyId) {
+      playerKeyframes[pullId] = isSweep
+        ? fromAlign({ x: pg.x, y: pg.y }, [0.3, c - d * 1, Y.ol + 2], [0.6, c + d * 9, Y.ol + 0.5], [1, c + d * 16, Y.los - 0.5])
+        : fromAlign({ x: pg.x, y: pg.y }, [0.3, c - d * 1, Y.ol + 1.5], [0.6, c + d * 4, Y.ol + 0.5], [1, c + d * 7, Y.los - 1]);
+    }
+    // Lead blocker (fullback) kicks out the edge or leads wide on a sweep.
+    const fb = byId("fb");
+    if (fb) {
+      playerKeyframes["fb"] = isSweep
+        ? fromAlign({ x: fb.x, y: fb.y }, [0.4, c + d * 10, Y.ol], [1, c + d * 18, Y.los - 1])
+        : fromAlign({ x: fb.x, y: fb.y }, [0.4, c + d * 6, Y.ol + 1], [1, c + d * 11, Y.los]);
+    }
+  };
+
+  // Front seven flows to the ball on a run: linebackers scrape over the top and
+  // fill, the backside linebacker checks cutback before pursuing.
+  const addRunFlow = () => {
+    const mlb = { x: c + 5, y: Y.lb };
+    const wlb = { x: c - 5, y: Y.lb };
+    const playLB = d > 0 ? "lb-m" : "lb-w";
+    const cutLB = d > 0 ? "lb-w" : "lb-m";
+    playerKeyframes[playLB] = fromAlign(
+      (playLB === "lb-m" ? mlb : wlb),
+      [HOLE, c + d * 4, Y.lb - 1.5],
+      [1, c + d * 9, Y.los - 1],
+    );
+    playerKeyframes[cutLB] = fromAlign(
+      (cutLB === "lb-m" ? mlb : wlb),
+      [HOLE, c + d * 1, Y.lb - 0.5],
+      [1, c + d * 4.5, Y.los + 0.5],
+    );
+  };
+
+  // Pass coverage: settle at leverage depth, then break on the throw and arrive
+  // at the catch point to make the play.
+  const coverPass = (routeEnd: Point, label: string | null, man: boolean, outside = false) => {
+    const settle: Point = { x: align.x + sign * 1, y: Math.min(align.y, 36) };
+    const contest: Point = { x: routeEnd.x + (outside ? sign : -sign) * 1.5, y: routeEnd.y + 2 };
+    const midPt: Point = { x: (settle.x + contest.x) / 2, y: (settle.y + contest.y) / 2 };
+    const frames = fromAlign(align2, [0.4, settle.x, settle.y], [0.72, midPt.x, midPt.y], [CAUGHT, contest.x, contest.y], [1, contest.x, contest.y]);
+    // Keep any path label up by the drop so it never collides with the finish
+    // label at the catch point.
+    if (label) setSS(frames, label, { x: align.x + sign * 3, y: 24 });
+    else setSS(frames);
+    finish = { at: { x: routeEnd.x, y: routeEnd.y }, kind: "tackle", label: man ? "CONTEST" : "BREAK ON IT", from: FINISH_FROM };
+  };
+
+  // Offense pass-protects: the line kick-slides into a pocket and a back stays in
+  // to help. (Silent movement—no drawn arrows.)
+  const addPassPro = () => {
+    for (const id of ["ol-lt", "ol-lg", "c", "ol-rg", "ol-rt"]) {
+      const p = byId(id);
+      if (!p || p.id === keyId) continue;
+      const kick = p.x < c ? -1 : p.x > c ? 1 : 0;
+      playerKeyframes[id] = fromAlign({ x: p.x, y: p.y }, [0.4, p.x + kick, Y.ol + 1], [1, p.x + kick * 1.5, Y.ol + 2]);
+    }
+    const back = byId("rb") ?? byId("fb");
+    if (back && back.id !== keyId) {
+      playerKeyframes[back.id] = fromAlign({ x: back.x, y: back.y }, [1, back.x + sign * 2, Y.ol + 2.5]);
+    }
+  };
+
   // ----- carrier-driven outcomes: run, and Power/Blitz QB keepers ----------
   const carrierOutcome = outcome === "run" || (outcome === "qb" && (call === "Power" || call === "Blitz"));
 
@@ -231,10 +324,20 @@ function buildMotion(
     const carrier = carrierIsQB ? qb : rb!;
     const carrierId = carrierIsQB ? "qb" : "rb";
     const start: Point = { x: carrier.x, y: carrier.y };
-    const hole: Point = { x: c + d * 5, y: Y.los + 2 };
-    const bounce: Point = { x: c + d * 12, y: Y.los - 0.5 };
-    const caught: Point =
-      d === sign ? { x: c + d * 15, y: Y.los - 2 } : { x: c + d * 16, y: Y.los - 4 };
+    // A handoff toward your side is a SWEEP: the back tries to beat you around
+    // the edge, so you have to set it and force the ball back inside.
+    const sweep = outcome === "run" && !carrierIsQB && d === sign;
+    const hole: Point = sweep
+      ? { x: c + d * 8, y: Y.los + 3 }
+      : { x: c + d * 5, y: Y.los + 2 };
+    const bounce: Point = sweep
+      ? { x: c + d * 17, y: Y.los }
+      : { x: c + d * 12, y: Y.los - 0.5 };
+    const caught: Point = sweep
+      ? { x: c + d * 18, y: Y.los - 2 } // turned back in and contained at the edge
+      : d === sign
+        ? { x: c + d * 15, y: Y.los - 2 }
+        : { x: c + d * 16, y: Y.los - 4 };
 
     const handoff = !carrierIsQB;
     const carrierFrames = handoff
@@ -243,18 +346,27 @@ function buildMotion(
     playerKeyframes[carrierId] = carrierFrames;
 
     ballKeyframes = handoff
-      ? track([0, qb.x, qb.y], [SNAP_T, qb.x, qb.y], [MESH, meshPoint.x, meshPoint.y], [HOLE, hole.x, hole.y], [BOUNCE, bounce.x, bounce.y], [CAUGHT, caught.x, caught.y], [1, caught.x, caught.y])
-      : track([0, qb.x, qb.y], [SNAP_T, qb.x, qb.y], [HOLE, hole.x, hole.y], [BOUNCE, bounce.x, bounce.y], [CAUGHT, caught.x, caught.y], [1, caught.x, caught.y]);
+      ? track([0, c, Y.los], [SNAP_T, qb.x, qb.y], [MESH, meshPoint.x, meshPoint.y], [HOLE, hole.x, hole.y], [BOUNCE, bounce.x, bounce.y], [CAUGHT, caught.x, caught.y], [1, caught.x, caught.y])
+      : track([0, c, Y.los], [SNAP_T, qb.x, qb.y], [HOLE, hole.x, hole.y], [BOUNCE, bounce.x, bounce.y], [CAUGHT, caught.x, caught.y], [1, caught.x, caught.y]);
 
     // Key player blocks on a strong-side run (the run clue).
     if (d === sign && key.side === "offense" && keyId !== carrierId) {
       playerKeyframes[keyId] = fromAlign({ x: key.x, y: key.y }, [1, key.x - d * 2, Y.ol + 1]);
     }
 
-    const ssLabel =
-      call === "Power" ? "FORCE" : call === "Blitz" ? "RUSH & FINISH" : call === "Zone" ? "FIT & FINISH" : "FILL — KEEP LEVERAGE";
+    const ssLabel = sweep
+      ? "SET THE EDGE"
+      : call === "Power" ? "FORCE" : call === "Blitz" ? "RUSH & FINISH" : call === "Zone" ? "FIT & FINISH" : "FILL — KEEP LEVERAGE";
 
-    if (d === sign) {
+    if (sweep) {
+      // Get width OUTSIDE the ball, set a hard edge, then force it back inside
+      // and finish. The SS stays wider than the carrier until the turn-back.
+      setSS(
+        fromAlign(align2, [HOLE, c + sign * 21, Y.los - 1], [BOUNCE, c + sign * 22, Y.los], [CAUGHT, caught.x, caught.y], [1, caught.x, caught.y]),
+        ssLabel,
+        { x: c + sign * 26, y: 40 },
+      );
+    } else if (d === sign) {
       // Strong side: keep leverage, turn it back inside, meet and finish.
       setSS(
         fromAlign(align2, [HOLE, c + sign * 16, Y.los - 3], [0.68, c + sign * 15, Y.los - 1], [CAUGHT, caught.x, caught.y], [1, caught.x, caught.y]),
@@ -272,6 +384,8 @@ function buildMotion(
 
     if (d === sign && call === "Power") addPowerContain();
     if (call === "Blitz") addBlitzInside();
+    addRunBlocking(sweep);
+    addRunFlow();
     coachView.readKey = { at: { x: key.x, y: key.y }, label: "Read key" };
 
     finish = {
@@ -281,14 +395,16 @@ function buildMotion(
       from: FINISH_FROM,
     };
 
-    const readCap =
-      d === sign
+    const readCap = sweep
+      ? "Sweep your way—he's trying to beat you around the edge."
+      : d === sign
         ? outcome === "qb"
           ? "He keeps it toward you—keep your leverage, stay home."
           : "He bounces it outside—squeeze and keep your edge."
         : "Ball's going away—open your hips and go.";
-    const reactCap =
-      d === sign
+    const reactCap = sweep
+      ? "Set the edge and force it back inside. Never let the ball get outside your leverage."
+      : d === sign
         ? "Turn it back inside, break down, wrap up, and finish."
         : "Take a pursuit angle and run to the ball. Never assume someone else makes the tackle.";
     captions.push(base(beforeCap), { phase: "read", text: readCap }, { phase: "react", text: reactCap });
@@ -297,12 +413,27 @@ function buildMotion(
   }
 
   // ----- pass develops: receiver route + ball flight -----------------------
-  const developPass = () => {
-    const routeEnd: Point = { x: key.x + sign * 2, y: 27 };
-    playerKeyframes[keyId] = fromAlign({ x: key.x, y: key.y }, [0.32, key.x + sign, 40], [1, routeEnd.x, routeEnd.y]);
-    ballFlightFrom = 0.58;
+  // Curl: push vertical, then settle at curl depth. Flat: quick shallow break
+  // to the sideline. The route is drawn + labeled so "ball goes" reads clearly.
+  const developPass = (targetId: string = keyId, variant: "curl" | "flat" = passVariant) => {
+    const t = byId(targetId) ?? key;
+    const toWeak = t.strongSide === false;
+    const flat = variant === "flat" && !toWeak;
+    const routeEnd: Point = toWeak
+      ? { x: clampX(t.x - sign * 2), y: 30 }
+      : flat
+        ? { x: clampX(t.x + sign * 13), y: 44 } // quick break to the sideline
+        : { x: t.x - sign * 3, y: 34 }; // hook back inside toward the QB
+    // Curl pushes vertical to depth, then hooks back; flat breaks out shallow.
+    const frames = flat
+      ? fromAlign({ x: t.x, y: t.y }, [0.26, t.x + sign * 5, 46], [1, routeEnd.x, routeEnd.y])
+      : toWeak
+        ? fromAlign({ x: t.x, y: t.y }, [0.32, t.x, 42], [1, routeEnd.x, routeEnd.y])
+        : fromAlign({ x: t.x, y: t.y }, [0.35, t.x, 37], [0.72, t.x - sign * 1, 30], [1, routeEnd.x, routeEnd.y]);
+    addAssign(targetId, frames, toWeak ? "AWAY" : flat ? "FLAT" : "CURL", { x: routeEnd.x + sign * 4, y: routeEnd.y - 5 });
+    ballFlightFrom = flat ? 0.5 : 0.58; // the flat comes out quicker
     ballKeyframes = track(
-      [0, qb.x, qb.y],
+      [0, c, Y.los],
       [SNAP_T, qb.x, qb.y],
       [ballFlightFrom, qb.x, qb.y],
       [1, routeEnd.x, routeEnd.y + 2],
@@ -310,18 +441,50 @@ function buildMotion(
     return routeEnd;
   };
 
+  const weakReceiver = () =>
+    offense.find((p) => p.strongSide === false && (p.role === "slot" || p.role === "WR" || p.role === "TE")) ??
+    byId("wr-x");
+
+  // Weak-side pass: the ball goes to the other side of the field. Rally across
+  // on a pursuit angle and help finish (not Blitz — the rush keeps coming).
+  if (outcome === "pass" && call !== "Blitz" && d !== sign) {
+    const rec = weakReceiver();
+    const catchPt: Point = { x: rec ? rec.x - sign * 2 : c - sign * 14, y: 30 };
+    if (rec) {
+      const recFrames = fromAlign({ x: rec.x, y: rec.y }, [0.32, rec.x, 42], [1, catchPt.x, catchPt.y]);
+      addAssign(rec.id, recFrames, "AWAY", { x: catchPt.x, y: catchPt.y - 3 });
+    }
+    ballFlightFrom = 0.55;
+    ballKeyframes = track([0, c, Y.los], [SNAP_T, qb.x, qb.y], [ballFlightFrom, qb.x, qb.y], [1, catchPt.x, catchPt.y + 2]);
+    addPassPro();
+    setSS(
+      fromAlign(align2, [0.45, align.x - sign * 2, Y.ws + 1], [0.7, c, Y.ws + 3], [CAUGHT, catchPt.x, catchPt.y + 4], [1, catchPt.x, catchPt.y + 4]),
+      "RALLY",
+      { x: c, y: Y.los - 9 },
+    );
+    finish = { at: { x: catchPt.x, y: catchPt.y + 4 }, kind: "tackle", label: "RALLY & FINISH", from: FINISH_FROM };
+    coachView.readKey = { at: { x: key.x, y: key.y }, label: call === "Man" ? "Your man (No. 2)" : "Read key" };
+    captions.push(
+      base(beforeCap),
+      { phase: "read", text: "The throw goes away from you—break and go." },
+      { phase: "react", text: "Rally to the ball and help finish. Be on every play, no matter where it is." },
+    );
+    return { paths, zone: undefined, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions, finish };
+  }
+
   if (call === "Power") {
     if (outcome === "pass") {
       const zone = curlFlatZone(align, sign);
       coachView.coverage = zone;
-      developPass();
-      setSS(fromAlign(align2, [0.5, align.x + sign * 2, 34], [1, align.x + sign * 3, 29]));
+      const re = developPass();
+      addPassPro();
+      coverPass(re, null, false);
       captions.push(
         base("Power, but stay honest—he can still throw."),
         { phase: "read", text: "He releases—get to your curl/flat and read it." },
-        { phase: "react", text: "Break on the throw. Power is not permission to ignore a pass." },
+        { phase: "react", text: "Break on the throw and cover it. Power is not permission to ignore a pass." },
       );
-      return { paths, zone, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions };
+      return { paths, zone, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions, finish };
     }
     // read: show the base force picture.
     setSS(fromAlign(align2, [0.5, c + sign * 16, Y.los - 1], [1, c + sign * 15, Y.los]), "FORCE", { x: c + sign * 22, y: 40 });
@@ -339,7 +502,8 @@ function buildMotion(
     const rushEnd: Point = { x: c + sign * 5, y: qb.y - 1 };
     addBlitzInside();
     if (outcome === "pass") {
-      developPass();
+      developPass(d === sign ? keyId : (weakReceiver()?.id ?? keyId));
+      addPassPro();
       setSS(fromAlign(align2, [0.45, c + sign * 11, Y.los], [1, rushEnd.x, rushEnd.y]), "EDGE RUSH", { x: c + sign * 20, y: align.y - 6 });
       captions.push(
         base("You are the outside rush—end goes inside."),
@@ -364,41 +528,50 @@ function buildMotion(
     if (outcome === "qb") {
       // Scramble: hold the zone, do NOT run-fit.
       playerKeyframes["qb"] = fromAlign({ x: qb.x, y: qb.y }, [0.5, c + sign * 4, qb.y - 3], [1, c + sign * 9, Y.los + 2]);
-      ballKeyframes = track([0, qb.x, qb.y], [SNAP_T, qb.x, qb.y], [0.5, c + sign * 4, qb.y - 3], [1, c + sign * 9, Y.los + 2]);
+      ballKeyframes = track([0, c, Y.los], [SNAP_T, qb.x, qb.y], [0.5, c + sign * 4, qb.y - 3], [1, c + sign * 9, Y.los + 2]);
       setSS(fromAlign(align2, [0.5, align.x + sign * 2, 33], [1, align.x + sign * 3, 30]));
       captions.push(
         base("You have curl/flat. Read the release."),
         { phase: "read", text: "He breaks the pocket—stay in your zone, eyes on the routes." },
         { phase: "react", text: "A scrambling QB can still throw. Hold coverage until your run-support rule." },
       );
+    } else if (outcome === "pass") {
+      const re = developPass();
+      addPassPro();
+      coverPass(re, null, false);
+      captions.push(
+        base("You have curl/flat. Read the release."),
+        { phase: "read", text: "Settle at depth and read the two-receiver combination." },
+        { phase: "react", text: "Break on the throw into your area and cover it—make the play on the ball." },
+      );
     } else {
-      // read / pass: drop and read.
-      if (outcome === "pass") developPass();
+      // read: drop and read the combination.
       setSS(fromAlign(align2, [0.5, align.x + sign * 2, 33], [1, align.x + sign * 4, 29]));
       captions.push(
         base("You have curl/flat. Read the release."),
         { phase: "read", text: "Settle at depth and read the two-receiver combination." },
-        { phase: "react", text: outcome === "pass" ? "Break on the throw into your area." : "Picture the routes and your break." },
+        { phase: "react", text: "Picture the routes and your break." },
       );
     }
-    return { paths, zone, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions };
+    return { paths, zone, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions, finish };
   }
 
   // ----- Man coverage ------------------------------------------------------
   coachView.readKey = { at: { x: key.x, y: key.y }, label: "Your man (No. 2)" };
   if (outcome === "pass") {
     const routeEnd = developPass();
-    const trailEnd: Point = isTE ? { x: routeEnd.x + sign * 4, y: routeEnd.y + 3 } : { x: routeEnd.x + sign * 2, y: routeEnd.y + 3 };
-    setSS(fromAlign(align2, [0.4, key.x + sign * 2, 39], [1, trailEnd.x, trailEnd.y]), "MATCH No. 2", { x: key.x, y: 22 });
+    addPassPro();
+    // Trail the route in phase and contest at the catch (outside leverage on a TE).
+    coverPass(routeEnd, "MATCH No. 2", true, isTE);
     captions.push(
       base(beforeCap),
       { phase: "read", text: "He releases—stay with your man." },
-      { phase: "react", text: "Run the route with him. Don't peek at the QB." },
+      { phase: "react", text: "Run the route with him and contest the catch. Don't peek at the QB." },
     );
   } else if (outcome === "qb") {
     // Scramble: stay with your man, do NOT run-fit.
     playerKeyframes["qb"] = fromAlign({ x: qb.x, y: qb.y }, [0.5, c + sign * 4, qb.y - 3], [1, c + sign * 9, Y.los + 2]);
-    ballKeyframes = track([0, qb.x, qb.y], [SNAP_T, qb.x, qb.y], [0.5, c + sign * 4, qb.y - 3], [1, c + sign * 9, Y.los + 2]);
+    ballKeyframes = track([0, c, Y.los], [SNAP_T, qb.x, qb.y], [0.5, c + sign * 4, qb.y - 3], [1, c + sign * 9, Y.los + 2]);
     // The receiver keeps working (scramble drill).
     playerKeyframes[keyId] = fromAlign({ x: key.x, y: key.y }, [1, key.x + sign * 3, 33]);
     setSS(fromAlign(align2, [0.5, key.x + sign * 2, 38], [1, key.x + sign * 3, 32]), "STAY ON YOUR MAN", { x: key.x, y: 22 });
@@ -418,7 +591,7 @@ function buildMotion(
     );
   }
 
-  return { paths, zone: undefined, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions };
+  return { paths, zone: undefined, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions, finish };
 }
 
 function buildDefense(c: number, sign: 1 | -1, align: SSAlign): DerivedPlayer[] {
@@ -446,9 +619,9 @@ function shortSide(side: Selection["side"]): string {
     case "right":
       return "Ball On Right Hash";
     case "middle":
-      return "Middle · Laso";
+      return "Middle · LASO";
     case "middle-right":
-      return "Middle · River";
+      return "Middle · RIVER";
   }
 }
 
@@ -478,16 +651,16 @@ function buildContent(
       "Cover the tight end on your side. Watch his release, and be ready for a block or a block-and-release.";
   }
   task +=
-    (balanced && middle ? " Balanced formation: listen for the FS—River is right, Laso is left." : "") +
+    (balanced && middle ? " Balanced formation: listen for the FS—RIVER is right, LASO is left." : "") +
     (empty ? " No back: watch for a QB run or receiver sweep." : "");
 
   // Side / strength.
   const ssWord = ssSide.toLowerCase();
   const sideWhy = middle
     ? balanced
-      ? `The ball is in the middle and the formation is balanced. Your FS calls strength: River means right; Laso means left. This diagram puts you on the ${ssWord} side (${sideMeta.fsCall}).`
+      ? `The ball is in the middle and the formation is balanced. Your FS calls strength: RIVER means right; LASO means left. This diagram puts you on the ${ssWord} side (${sideMeta.fsCall}).`
       : `The ball is in the middle. The stronger receiver side puts you ${ssWord} in this diagram.`
-    : `The ball is on the ${side} hash. The ${ssWord} side has more room to the sideline. Expect that wide side to be strong, then listen for the FS: River is right; Laso is left. His call confirms your side. Use your assignment and any called adjustment.`;
+    : `The ball is on the ${side} hash. The ${ssWord} side has more room to the sideline. Expect that wide side to be strong, then listen for the FS: RIVER is right; LASO is left. His call confirms your side. Use your assignment and any called adjustment.`;
 
   // Formation read.
   let formationWhy = fMeta.why;
@@ -709,6 +882,7 @@ function effortNoteFor(outcome: Selection["outcome"], runDirection: RunDirection
 
 export interface ScenarioOptions {
   runDirection?: RunDirection;
+  passTarget?: PassTarget;
 }
 
 export function deriveScenario(selection: Selection, opts: ScenarioOptions = {}): Scenario {
@@ -718,13 +892,14 @@ export function deriveScenario(selection: Selection, opts: ScenarioOptions = {})
   const ssSide = ssSideLabel(sign);
   const align = ssAlignment(call, formation, c, sign);
   const runDirection: RunDirection = opts.runDirection ?? "strong";
+  const passTarget: PassTarget = opts.passTarget ?? "curl";
 
   const offense = buildOffense(formation, c, sign);
   const defense = buildDefense(c, sign, align);
   // Power/Blitz read the TE if present, else No. 2 strong; Zone/Man read No. 2.
   const resolvedKeyId = isTEFormation(formation) ? "te-s" : strongNo2Id(formation);
 
-  const motion = buildMotion(selection, c, sign, align, offense, resolvedKeyId, runDirection);
+  const motion = buildMotion(selection, c, sign, align, offense, resolvedKeyId, runDirection, passTarget);
 
   // Attach keyframes to players.
   const attach = (players: DerivedPlayer[]) =>
@@ -782,6 +957,10 @@ export function deriveScenario(selection: Selection, opts: ScenarioOptions = {})
     formationWhy: content.formationWhy,
     finish: motion.finish,
     runDirection,
-    effortNote: effortNoteFor(outcome, runDirection, !!motion.finish),
+    effortNote: effortNoteFor(
+      outcome,
+      outcome === "pass" ? (passTarget === "away" ? "weak" : "strong") : runDirection,
+      !!motion.finish,
+    ),
   };
 }

@@ -84,8 +84,8 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
           <h3>Which way is the field?</h3>
           <p className="muted">
             Defense is on top; offense is below. Left and right follow the defender facing the offense: your{" "}
-            <strong>right</strong> is screen-left and your <strong>left</strong> is screen-right. River means right,
-            Laso means left.
+            <strong>right</strong> is screen-left and your <strong>left</strong> is screen-right. RIVER means right,
+            LASO means left.
           </p>
         </section>
 

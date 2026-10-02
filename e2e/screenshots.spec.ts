@@ -60,6 +60,20 @@ test.describe("mobile screenshots", () => {
     await shot(page, "power-i-left-run-midpoint");
   });
 
+  test("Zone · twins · left · pass — flat coverage (break on the ball)", async ({ page }) => {
+    await page.goto(go({ call: "Zone", ball: "left", formation: "twins", outcome: "pass" }));
+    await page.getByRole("button", { name: /Change the play/ }).click();
+    await page.getByRole("menuitemradio", { name: "Flat" }).click();
+    await page.keyboard.press("Escape");
+    await page.$eval('input[type="range"]', (el) => {
+      const input = el as HTMLInputElement;
+      input.value = "950";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.waitForTimeout(300);
+    await shot(page, "zone-twins-left-flat-coverage");
+  });
+
   test("field view menu is not cropped on a phone", async ({ page }) => {
     await page.goto(go({ call: "Man", ball: "left", formation: "trips", outcome: "run" }));
     await page.locator(".field-viewport").scrollIntoViewIfNeeded();

@@ -11,7 +11,7 @@ import { PlaybackProvider } from "../anim/playback";
 import { FieldViewport } from "../components/field/FieldViewport";
 import { FieldViewMenu } from "../components/field/FieldViewMenu";
 import { PlayField } from "../components/field/PlayField";
-import { PlaybackControls } from "../components/field/PlaybackControls";
+import { FieldTransport, PlaybackScrubber } from "../components/field/PlaybackControls";
 import type { FieldView } from "../state/storage";
 import { SelectedPlayNotes } from "../components/plays/SelectedPlayNotes";
 import { ReviewQueue } from "../components/practice/ReviewQueue";
@@ -183,14 +183,17 @@ function PracticeRep({
           mode={view}
           resetSignal={resetSignal}
           overlay={
-            <FieldViewMenu
-              mode={view}
-              onMode={setView}
-              onReset={() => {
-                setView("detail");
-                setResetSignal((n) => n + 1);
-              }}
-            />
+            <>
+              <FieldViewMenu
+                mode={view}
+                onMode={setView}
+                onReset={() => {
+                  setView("fit");
+                  setResetSignal((n) => n + 1);
+                }}
+              />
+              <FieldTransport />
+            </>
           }
         >
           <PlayField
@@ -204,7 +207,7 @@ function PracticeRep({
             onOpenTip={() => {}}
           />
         </FieldViewport>
-        <PlaybackControls />
+        <PlaybackScrubber />
       </PlaybackProvider>
 
       {!revealed ? (

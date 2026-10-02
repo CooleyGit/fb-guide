@@ -8,12 +8,13 @@
   /* Play-type colors (run / pass / balanced), used by tendency bars, the
      "after the snap" selection, and the selected formation-card border.
      QB run shares the run color. */
-  --run: #2e7d46;
-  --run-tint: #dcefe3;
+  /* Warm burnt-orange so RUN never reads as the react-phase green on the field. */
+  --run: #c0561f;
+  --run-tint: #f7e6da;
   --pass: #2b5fb0;
   --pass-tint: #dde6f5;
-  --even: #5b6b78;
-  --even-tint: #e4e8eb;
+  --even: #6c757d;
+  --even-tint: #eceef0;
   --field: #f1f6f2;
   --field-line: #dde7df;
   --field-hash: #9eb1a5;
@@ -41,7 +42,7 @@ body {
   background: var(--page-bg);
   color: var(--ink);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 body {
@@ -100,7 +101,8 @@ button {
 .app-shell {
   display: grid;
   grid-template-columns: var(--rail-w) 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden; /* only .app-main scrolls — no second outer scrollbar */
 }
 
 .nav-rail {
@@ -123,7 +125,7 @@ button {
   padding: 6px 10px 18px;
 }
 .brand-team {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.1em;
   color: var(--maroon);
@@ -132,6 +134,74 @@ button {
   font-size: 22px;
   font-weight: 800;
   color: var(--maroon-dark);
+}
+.position-menu {
+  position: relative;
+  margin-top: 1px;
+}
+.position-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--maroon-dark);
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+}
+.position-trigger svg {
+  color: var(--maroon);
+}
+.position-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin: 4px 0 0;
+  padding: 6px;
+  list-style: none;
+  min-width: 210px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px #172b3626;
+}
+.position-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.position-item:disabled {
+  color: var(--muted-ink);
+  cursor: default;
+}
+.position-item.selected {
+  background: var(--maroon-tint);
+  color: var(--maroon-dark);
+}
+.soon {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-ink);
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 999px;
 }
 .nav-rail ul {
   list-style: none;
@@ -267,6 +337,10 @@ button {
   stroke: var(--field-hash);
   stroke-width: 2;
 }
+.sideline-tick {
+  stroke: var(--field-hash);
+  stroke-width: 3;
+}
 .hash-guide {
   stroke: #b0c1b6;
   stroke-width: 2;
@@ -277,8 +351,12 @@ button {
   stroke-width: 6;
 }
 .scrimmage-line {
-  stroke: #799284;
-  stroke-width: 3;
+  stroke: #2f80ed;
+  stroke-width: 3.5;
+}
+.los-label {
+  fill: #2f80ed;
+  font-weight: 800;
 }
 .field-label {
   fill: #35505a;
@@ -385,6 +463,73 @@ button {
 .assignment-path.highlighted path {
   stroke-width: 9;
 }
+
+/* Progressive, phase-colored path segments (read = yellow, react = green). */
+.assignment-path .path-seg {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.assignment-path .seg-read {
+  stroke: #e8b014;
+  stroke-width: 7;
+}
+.assignment-path .seg-react {
+  stroke: #1e8e3e;
+  stroke-width: 7;
+}
+.assignment-path .seg-assignment {
+  stroke: var(--maroon);
+  stroke-width: 5;
+}
+.assignment-path .seg-arrow {
+  stroke: none;
+}
+.assignment-path .arrow-read {
+  fill: #e8b014;
+}
+.assignment-path .arrow-react {
+  fill: #1e8e3e;
+}
+.assignment-path .arrow-assignment {
+  fill: var(--maroon);
+}
+
+/* Pre-snap "watch your key" cue. */
+.read-hint-ring {
+  fill: none;
+  stroke: #e8b014;
+  stroke-width: 4;
+  stroke-dasharray: 7 9;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: read-pulse 1.2s ease-in-out infinite;
+}
+.read-hint-label {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  fill: #9a7400;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 4px;
+}
+@keyframes read-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .read-hint-ring {
+    animation: none;
+  }
+}
 .answer-label {
   font-size: 19px;
   font-weight: 800;
@@ -475,14 +620,27 @@ button {
   font-style: italic;
 }
 
-.viewpoint-note {
-  margin: 0;
+.viewpoint-banner {
   font-size: 13px;
   color: var(--muted-ink);
   background: var(--maroon-tint);
-  border-left: 4px solid var(--maroon);
-  padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 9px 13px;
+  overflow: hidden;
+  max-height: 60px;
+  transition: opacity 0.4s ease, max-height 0.4s ease, padding 0.4s ease;
+}
+.viewpoint-banner.out {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.notes-toggle {
+  position: absolute;
+  top: 10px;
+  right: 62px;
+  z-index: 20;
 }
 .field-caption {
   margin: 0;
@@ -571,6 +729,13 @@ button {
   position: absolute;
   top: 10px;
   right: 10px;
+  z-index: 20;
+}
+/* Shuffle-the-scenario control (top-left of the field) */
+.field-shuffle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
   z-index: 20;
 }
 .field-menu-button {
@@ -662,15 +827,36 @@ button {
   right: 10px;
   z-index: 20;
 }
-.play-menu-button:not([aria-expanded="true"]).outcome-run,
-.play-menu-button:not([aria-expanded="true"]).outcome-qb {
-  color: var(--run);
+.play-menu-button.outcome-run,
+.play-menu-button.outcome-qb {
+  background: var(--run);
+  border-color: var(--run);
+  color: #fff;
 }
-.play-menu-button:not([aria-expanded="true"]).outcome-pass {
-  color: var(--pass);
+.play-menu-button.outcome-pass {
+  background: var(--pass);
+  border-color: var(--pass);
+  color: #fff;
 }
 .play-menu-panel {
+  width: auto;
+  min-width: 184px;
   animation: playMenuIn 0.16s ease-out;
+}
+.play-menu-panel.two-col {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 4px;
+}
+.pm-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+}
+.pm-col-direction {
+  border-left: 1px solid var(--border);
+  padding-left: 4px;
 }
 .menu-hint {
   margin: 4px 10px 2px;
@@ -723,7 +909,7 @@ button {
   stroke-width: 6;
 }
 .finish-tackle .finish-ring {
-  stroke: var(--ss);
+  stroke: #1e8e3e;
 }
 .finish-sack .finish-ring {
   stroke: var(--maroon);
@@ -816,48 +1002,68 @@ button {
 }
 
 /* --------------------------------------------------------------- controls */
-.playback-controls {
+/* In-field transport (bottom-left corner, like the menus) */
+.field-transport {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 20;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.transport {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
-}
-.transport-button,
-.speed-button {
-  min-height: 44px;
-  padding: 8px 16px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--border-strong);
-  background: var(--surface);
-  color: var(--maroon-dark);
+  border-radius: 12px;
+  padding: 5px 6px;
+  box-shadow: 0 2px 8px #172b3626;
+}
+.transport-icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
   border-radius: 9px;
-  font-weight: 700;
+  color: var(--maroon-dark);
   cursor: pointer;
 }
-.transport-button.primary {
+.transport-icon:hover {
+  background: var(--surface-2);
+}
+.transport-icon.primary {
   background: var(--maroon);
   color: #fff;
-  border-color: var(--maroon);
+}
+.transport-icon.primary:hover {
+  background: var(--maroon-dark);
 }
 .speed-toggle {
   display: inline-flex;
-  gap: 2px;
   border: 1px solid var(--border-strong);
   border-radius: 9px;
   overflow: hidden;
 }
 .speed-button {
+  min-height: 36px;
+  padding: 4px 10px;
   border: none;
-  border-radius: 0;
-  min-width: 52px;
+  background: var(--surface);
+  color: var(--maroon-dark);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
 }
 .speed-button[aria-pressed="true"] {
-  background: var(--maroon);
-  color: #fff;
+  font-weight: 800;
+  background: var(--maroon-tint);
+}
+.playback-scrubber {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .scrubber input[type="range"] {
   width: 100%;
@@ -1044,7 +1250,7 @@ button {
 .formation-card-name {
   font-size: 12px;
   font-weight: 700;
-  color: var(--maroon-dark);
+  color: #293229;
   padding: 2px 10px 8px;
 }
 .tendency-bar {
@@ -1071,8 +1277,8 @@ button {
   color: #fff;
 }
 .tendency-neutral {
-  background: var(--even);
-  color: #fff;
+  background: var(--even-tint);
+  color: var(--muted-ink);
 }
 
 /* ------------------------------------------------------------------ notes */
@@ -1571,6 +1777,28 @@ details summary {
   font-size: 13px;
   font-weight: 700;
 }
+.chip.outcome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+}
+/* Pre-snap: run/pass unknown — show the formation lean, grayed. */
+.outcome-chip.lean {
+  background: #e7eaee;
+  color: #5c6672;
+}
+.outcome-chip svg {
+  flex: none;
+}
+.outcome-chip.outcome-run,
+.outcome-chip.outcome-qb,
+.outcome-chip.outcome-read {
+  background: var(--run);
+}
+.outcome-chip.outcome-pass {
+  background: var(--pass);
+}
 .selection-toggle {
   display: inline-flex;
   align-items: center;
@@ -1643,7 +1871,7 @@ details summary {
 .ball-option-main {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--maroon-dark);
+  color: #293229;
 }
 .ball-option-note {
   font-size: 11px;
@@ -1665,11 +1893,25 @@ details summary {
     display: none;
   }
   .app-main {
-    height: auto;
-    min-height: 100vh;
+    /* Body is overflow:hidden, so .app-main stays the scroll container. */
+    height: 100dvh;
+    min-height: 0;
   }
   .app-content {
     padding: 14px 12px calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+  .chip {
+    font-size: 10px;
+  }
+  .selection-toggle {
+    font-size: 10px;
+    min-height: 30px;
+    padding: 4px 10px;
+    gap: 4px;
+  }
+  .selection-toggle svg {
+    width: 13px;
+    height: 13px;
   }
   .bottom-nav {
     display: flex;

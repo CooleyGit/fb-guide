@@ -46,12 +46,12 @@ export const LESSONS: Lesson[] = [
   {
     id: "river-laso",
     topic: "Before the snap",
-    title: "Listen for River or Laso",
+    title: "Listen for RIVER or LASO",
     body: [
-      "River = right. Laso = left. Start by looking for the wide side—the side with more room between the ball and the sideline. For the alignment rule in this guide, expect that to be the strong side.",
-      "Left hash → wide side right → expect River. Right hash → wide side left → expect Laso.",
+      "RIVER = right. LASO = left. Start by looking for the wide side—the side with more room between the ball and the sideline. For the alignment rule in this guide, expect that to be the strong side.",
+      "Left hash → wide side right → expect RIVER. Right hash → wide side left → expect LASO.",
       "Always listen for the FS. Your free safety makes the strength call. The wide side gives you a starting expectation; the FS’s call confirms the side your defense is using.",
-      "Ball in the middle? Neither side is wider. Read the formation and listen for the FS to declare River or Laso. If the formation is balanced, don’t pick a side on your own.",
+      "Ball in the middle? Neither side is wider. Read the formation and listen for the FS to declare RIVER or LASO. If the formation is balanced, don’t pick a side on your own.",
     ],
     tryScenario: { call: "Zone", side: "middle-right", formation: "twins", outcome: "read" },
     tryLabel: "Try a middle-ball strength call",
