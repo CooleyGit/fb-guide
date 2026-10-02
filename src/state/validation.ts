@@ -7,7 +7,7 @@ export const DEFAULT_SELECTION: Selection = {
   call: "Man",
   side: "left",
   formation: "i",
-  outcome: "read",
+  outcome: "run",
 };
 
 export function isCall(v: unknown): v is CallId {

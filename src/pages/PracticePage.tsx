@@ -9,8 +9,10 @@ import { usePractice } from "../state/Practice";
 import type { PracticeFilter } from "../state/practiceGen";
 import { PlaybackProvider } from "../anim/playback";
 import { FieldViewport } from "../components/field/FieldViewport";
+import { FieldViewMenu } from "../components/field/FieldViewMenu";
 import { PlayField } from "../components/field/PlayField";
 import { PlaybackControls } from "../components/field/PlaybackControls";
+import type { FieldView } from "../state/storage";
 import { SelectedPlayNotes } from "../components/plays/SelectedPlayNotes";
 import { ReviewQueue } from "../components/practice/ReviewQueue";
 
@@ -159,6 +161,8 @@ function PracticeRep({
   onEnd: () => void;
 }) {
   const scenario = useMemo(() => deriveScenario(selection), [selection]);
+  const [view, setView] = useState<FieldView>("detail");
+  const [resetSignal, setResetSignal] = useState(0);
 
   return (
     <section className="practice-rep">
@@ -174,7 +178,21 @@ function PracticeRep({
       <h2 className="scenario-title">{scenario.scenarioTitle}</h2>
 
       <PlaybackProvider resetKey={selectionKey(selection) + (revealed ? ":r" : ":h")}>
-        <FieldViewport scenario={scenario} mode="detail">
+        <FieldViewport
+          scenario={scenario}
+          mode={view}
+          resetSignal={resetSignal}
+          overlay={
+            <FieldViewMenu
+              mode={view}
+              onMode={setView}
+              onReset={() => {
+                setView("detail");
+                setResetSignal((n) => n + 1);
+              }}
+            />
+          }
+        >
           <PlayField
             scenario={scenario}
             hideAnswers={!revealed}

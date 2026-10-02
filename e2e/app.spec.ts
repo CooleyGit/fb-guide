@@ -63,10 +63,25 @@ test("malformed query parameters fall back safely", async ({ page }) => {
 test("hide answers removes the SS assignment path", async ({ page }) => {
   await page.goto(playUrl({ call: "Power", ball: "left", formation: "i", outcome: "run" }));
   await expect(page.locator(".kind-ss")).toHaveCount(1);
-  await page.getByRole("button", { name: "Hide answers" }).click();
+  await page.getByRole("button", { name: "Field view options" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Hide answers" }).click();
   await expect(page.locator(".kind-ss")).toHaveCount(0);
   // Offense still present (the stimulus).
   await expect(page.locator(".player.offense").first()).toBeVisible();
+});
+
+test("the field view menu switches to the whole-field view", async ({ page }) => {
+  await page.goto(playUrl({ call: "Man", ball: "left", formation: "trips", outcome: "run" }));
+  await page.getByRole("button", { name: "Field view options" }).click();
+  await page.getByRole("menuitemradio", { name: "Whole field" }).click();
+  await expect(page.getByRole("menuitemradio", { name: "Whole field" })).toHaveAttribute("aria-checked", "true");
+});
+
+test("choosing a run shows the ball-direction control", async ({ page }) => {
+  await page.goto(playUrl({ call: "Power", ball: "left", formation: "i", outcome: "pass" }));
+  await expect(page.getByRole("radio", { name: "Away from you" })).toHaveCount(0);
+  await page.getByRole("radio", { name: "Run", exact: true }).click();
+  await expect(page.getByRole("radio", { name: "Away from you" })).toBeVisible();
 });
 
 test("opening a contextual tip shows an explanation", async ({ page }) => {

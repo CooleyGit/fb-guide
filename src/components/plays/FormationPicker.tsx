@@ -1,5 +1,12 @@
 import type { FormationId } from "../../types";
 import { FORMATIONS, FORMATION_ORDER, buildOffense } from "../../data/formations";
+import { NeutralIcon, PassIcon, RunIcon } from "./icons";
+
+const TENDENCY: Record<"run" | "pass" | "neutral", { word: string; Icon: () => React.ReactNode }> = {
+  run: { word: "Run-leaning", Icon: () => <RunIcon size={15} /> },
+  pass: { word: "Pass-leaning", Icon: () => <PassIcon size={15} /> },
+  neutral: { word: "Balanced", Icon: () => <NeutralIcon size={15} /> },
+};
 
 const PREVIEW_W = 120;
 const PREVIEW_H = 72;
@@ -43,6 +50,7 @@ export function FormationPicker({
       {FORMATION_ORDER.map((id) => {
         const meta = FORMATIONS[id];
         const selected = value === id;
+        const t = TENDENCY[meta.tendency];
         return (
           <button
             key={id}
@@ -51,10 +59,14 @@ export function FormationPicker({
             aria-checked={selected}
             className={`formation-card${selected ? " selected" : ""}`}
             onClick={() => onChange(id)}
+            title={meta.lean}
           >
             <MiniFormation formation={id} />
             <span className="formation-card-name">{meta.name}</span>
-            <span className={`tendency tendency-${meta.tendency}`}>{meta.lean}</span>
+            <span className={`tendency tendency-${meta.tendency}`}>
+              {t.Icon()}
+              <span className="tendency-word">{t.word}</span>
+            </span>
           </button>
         );
       })}

@@ -43,7 +43,9 @@ test.describe("mobile screenshots", () => {
 
   test("Power · I · left · run (fit field)", async ({ page }) => {
     await page.goto(go({ call: "Power", ball: "left", formation: "i", outcome: "run" }));
-    await page.getByRole("button", { name: "Fit field" }).click();
+    await page.getByRole("button", { name: "Field view options" }).click();
+    await page.getByRole("menuitemradio", { name: "Whole field" }).click();
+    await page.keyboard.press("Escape");
     await shot(page, "power-i-left-run-fit");
   });
 
@@ -60,7 +62,9 @@ test.describe("mobile screenshots", () => {
 
   test("Man · trips · left · hidden answers", async ({ page }) => {
     await page.goto(go({ call: "Man", ball: "left", formation: "trips", outcome: "pass" }));
-    await page.getByRole("button", { name: "Hide answers" }).click();
+    await page.getByRole("button", { name: "Field view options" }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Hide answers" }).click();
+    await page.keyboard.press("Escape");
     await expect(page.locator(".kind-ss")).toHaveCount(0);
     await shot(page, "man-trips-left-hidden");
   });

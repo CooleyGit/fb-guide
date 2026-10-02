@@ -7,12 +7,22 @@ import type { FieldView } from "../../state/storage";
 import { useIsMobile } from "../../hooks/useMediaQuery";
 import { PlaybackProvider, usePlayback } from "../../anim/playback";
 import { FieldViewport } from "../field/FieldViewport";
+import { FieldViewMenu, type ViewMenuExtra } from "../field/FieldViewMenu";
 import { PlayField } from "../field/PlayField";
 import { TipPopover, TipSheet } from "../field/Tips";
 import { FieldCaption, PlaybackControls } from "../field/PlaybackControls";
 import { PlayControls } from "./PlayControls";
+import { PlayVariation } from "./PlayVariation";
 import { SelectedPlayNotes } from "./SelectedPlayNotes";
 import { Toast, useToast } from "../common/Toast";
+import { ChevronIcon, CoachIcon, EyeIcon, EyeOffIcon, GhostIcon, LinkIcon, StarIcon } from "./icons";
+
+const SIDE_PILL: Record<Selection["side"], string> = {
+  left: "Left hash",
+  right: "Right hash",
+  middle: "Middle · Laso",
+  "middle-right": "Middle · River",
+};
 
 export function PlayStudy({
   selection,
@@ -64,7 +74,9 @@ function PlayStudyInner({
   const [resetSignal, setResetSignal] = useState(0);
   const [openTip, setOpenTip] = useState<Hotspot | null>(null);
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Selection controls collapse on both desktop and mobile; open by default on
+  // desktop, tucked away on phones.
+  const [controlsOpen, setControlsOpen] = useState(!isMobile);
   const [toast, showToast] = useToast();
   const invokerRef = useRef<HTMLElement | SVGElement | null>(null);
   const descId = useId();
@@ -161,13 +173,33 @@ function PlayStudyInner({
       }
     : null;
 
+  const viewExtras: ViewMenuExtra[] = [
+    { id: "tips", label: "Tips & pins", icon: <EyeIcon />, active: prefs.tips, onClick: () => setPreference({ tips: !prefs.tips }) },
+    { id: "hide", label: hideAnswers ? "Show answers" : "Hide answers", icon: <EyeOffIcon />, active: hideAnswers, onClick: onToggleHide },
+    { id: "coach", label: "Coach view", icon: <CoachIcon />, active: prefs.coachView, onClick: () => setPreference({ coachView: !prefs.coachView }) },
+    { id: "ghost", label: "SS ghost trail", icon: <GhostIcon />, active: prefs.ghost, onClick: () => setPreference({ ghost: !prefs.ghost }) },
+  ];
+
   const field = (
     <FieldViewport
       scenario={scenario}
       mode={mode}
       describedById={descId}
       resetSignal={resetSignal}
-      overlay={tipProps ? isMobile ? <TipSheet {...tipProps} /> : <TipPopover {...tipProps} /> : undefined}
+      overlay={
+        <>
+          <FieldViewMenu
+            mode={mode}
+            onMode={setFieldView}
+            onReset={() => {
+              setFieldView("detail");
+              setResetSignal((n) => n + 1);
+            }}
+            extras={viewExtras}
+          />
+          {tipProps ? isMobile ? <TipSheet {...tipProps} /> : <TipPopover {...tipProps} /> : null}
+        </>
+      }
     >
       <PlayField
         scenario={scenario}
@@ -194,19 +226,25 @@ function PlayStudyInner({
         </p>
       </div>
 
-      {isMobile && (
-        <div className="selection-summary">
+      <div className="selection-summary">
+        <div className="summary-pills">
           <span className="chip">{selection.call}</span>
           <span className="chip">{scenario.formationName}</span>
-          <span className="chip">{scenario.scenarioTitle.split(" · ").slice(-1)[0]}</span>
-          <button type="button" className="link-button" onClick={() => setDrawerOpen((o) => !o)} aria-expanded={drawerOpen}>
-            {drawerOpen ? "Hide selection" : "Change selection"}
-          </button>
+          <span className="chip">{SIDE_PILL[selection.side]}</span>
         </div>
-      )}
+        <button
+          type="button"
+          className="selection-toggle"
+          aria-expanded={controlsOpen}
+          onClick={() => setControlsOpen((o) => !o)}
+        >
+          <ChevronIcon open={controlsOpen} />
+          {controlsOpen ? "Hide selection" : "Change selection"}
+        </button>
+      </div>
 
-      {(!isMobile || drawerOpen) && (
-        <div className={`controls-region${isMobile ? " drawer" : ""}`}>
+      {controlsOpen && (
+        <div className="controls-region">
           <PlayControls selection={selection} onChange={onChange} />
         </div>
       )}
@@ -217,33 +255,27 @@ function PlayStudyInner({
             Overhead view · defense on top. Your <strong>right</strong> is screen-left; your <strong>left</strong> is
             screen-right.
           </p>
-          <FieldToolbar
-            mode={mode}
-            tips={prefs.tips}
-            hideAnswers={hideAnswers}
-            favorite={favorite}
-            coachView={prefs.coachView}
-            ghost={prefs.ghost}
-            onFit={() => setFieldView(mode === "fit" ? "detail" : "fit")}
-            onFocus={() => setFieldView("focus")}
-            onReset={() => {
-              setFieldView("detail");
-              setResetSignal((n) => n + 1);
-            }}
-            onToggleTips={() => setPreference({ tips: !prefs.tips })}
-            onToggleHide={onToggleHide}
-            onToggleFavorite={toggleFavorite}
-            onCopyLink={copyLink}
-            onToggleCoach={() => setPreference({ coachView: !prefs.coachView })}
-            onToggleGhost={() => setPreference({ ghost: !prefs.ghost })}
-          />
           {field}
           <FieldCaption captions={scenario.captions} />
-          <p className="effort-note">{scenario.effortNote}</p>
+          <PlayVariation
+            outcome={selection.outcome}
+            onOutcome={(o) => onChange({ outcome: o })}
+            runDirection={runDirection}
+            onRunDirection={setRunDirection}
+            showDirection={!!scenario.finish}
+          />
           <PlaybackControls />
-          {scenario.finish && (
-            <RunDirectionControl value={runDirection} onChange={setRunDirection} />
-          )}
+          <p className="effort-note">{scenario.effortNote}</p>
+          <div className="field-actions">
+            <button type="button" className="action-chip" aria-pressed={favorite} onClick={toggleFavorite}>
+              <StarIcon filled={favorite} />
+              {favorite ? "Favorited" : "Favorite"}
+            </button>
+            <button type="button" className="action-chip" onClick={copyLink}>
+              <LinkIcon />
+              Copy link
+            </button>
+          </div>
           <TipList
             scenario={scenario}
             hideAnswers={hideAnswers}
@@ -258,65 +290,6 @@ function PlayStudyInner({
       </div>
 
       <Toast message={toast} />
-    </div>
-  );
-}
-
-function FieldToolbar(props: {
-  mode: FieldView;
-  tips: boolean;
-  hideAnswers: boolean;
-  favorite: boolean;
-  coachView: boolean;
-  ghost: boolean;
-  onFit: () => void;
-  onFocus: () => void;
-  onReset: () => void;
-  onToggleTips: () => void;
-  onToggleHide: () => void;
-  onToggleFavorite: () => void;
-  onCopyLink: () => void;
-  onToggleCoach: () => void;
-  onToggleGhost: () => void;
-}) {
-  return (
-    <div className="field-toolbar">
-      <div className="toolbar-primary">
-        <button type="button" className="tool" aria-pressed={props.mode === "fit"} onClick={props.onFit}>
-          {props.mode === "fit" ? "Zoom to detail" : "Fit field"}
-        </button>
-        <button type="button" className="tool" aria-pressed={props.mode === "focus"} onClick={props.onFocus}>
-          Focus SS
-        </button>
-        <button type="button" className="tool" onClick={props.onReset}>
-          Reset view
-        </button>
-        <button type="button" className="tool" aria-pressed={props.tips} onClick={props.onToggleTips}>
-          Tips {props.tips ? "on" : "off"}
-        </button>
-        <button type="button" className="tool" aria-pressed={props.hideAnswers} onClick={props.onToggleHide}>
-          {props.hideAnswers ? "Show answers" : "Hide answers"}
-        </button>
-      </div>
-      <div className="toolbar-secondary">
-        <button type="button" className="tool" aria-pressed={props.favorite} onClick={props.onToggleFavorite}>
-          {props.favorite ? "★ Favorited" : "☆ Favorite"}
-        </button>
-        <button type="button" className="tool" onClick={props.onCopyLink}>
-          Copy link
-        </button>
-        <details className="more-actions">
-          <summary className="tool">More</summary>
-          <div className="more-panel">
-            <button type="button" className="tool" aria-pressed={props.coachView} onClick={props.onToggleCoach}>
-              Coach view {props.coachView ? "on" : "off"}
-            </button>
-            <button type="button" className="tool" aria-pressed={props.ghost} onClick={props.onToggleGhost}>
-              SS ghost {props.ghost ? "on" : "off"}
-            </button>
-          </div>
-        </details>
-      </div>
     </div>
   );
 }
@@ -349,36 +322,5 @@ function TipList({
         ))}
       </ul>
     </details>
-  );
-}
-
-/** Which way the ball carrier goes, so the SS learns both contain and pursuit. */
-function RunDirectionControl({
-  value,
-  onChange,
-}: {
-  value: RunDirection;
-  onChange: (dir: RunDirection) => void;
-}) {
-  return (
-    <div className="run-direction">
-      <span className="rd-label">Ball goes:</span>
-      <div className="segmented-track" role="radiogroup" aria-label="Run direction">
-        <button type="button" className="segment" aria-checked={value === "strong"} role="radio" onClick={() => onChange("strong")}>
-          To your edge
-        </button>
-        <button type="button" className="segment" aria-checked={value === "weak"} role="radio" onClick={() => onChange("weak")}>
-          Away from you
-        </button>
-      </div>
-      <button
-        type="button"
-        className="shuffle"
-        onClick={() => onChange(Math.random() < 0.5 ? "strong" : "weak")}
-        aria-label="Shuffle run direction"
-      >
-        🎲 Mix it up
-      </button>
-    </div>
   );
 }
