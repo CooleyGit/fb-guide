@@ -13,9 +13,11 @@ export function PhaseChips() {
           key={p}
           type="button"
           className="phase-chip"
+          data-phase={p}
           aria-pressed={phase === p}
           onClick={() => seekPhase(p)}
         >
+          <span className="phase-dot" aria-hidden="true" />
           {PHASE_LABELS[p]}
         </button>
       ))}

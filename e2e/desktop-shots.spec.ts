@@ -16,6 +16,23 @@ test.describe("desktop screenshots", () => {
     await shot(page, "desktop-plays");
   });
 
+  test("Play menu open (Power · i · run)", async ({ page }) => {
+    await page.goto("#/plays?call=Power&ball=left&formation=i&outcome=run");
+    await page.locator(".field-viewport").scrollIntoViewIfNeeded();
+    await page.getByRole("button", { name: /Change the play/ }).click();
+    await page.getByRole("menu", { name: "Change the play" }).waitFor();
+    await page.waitForTimeout(300);
+    await shot(page, "desktop-play-menu");
+  });
+
+  test("Phase chips (stop-light)", async ({ page }) => {
+    await page.goto("#/plays?call=Power&ball=left&formation=i&outcome=run");
+    const chips = page.locator(".phase-chips");
+    await chips.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+    await chips.screenshot({ path: `screenshots/${test.info().project.name}/phase-chips.png` });
+  });
+
   test("Learn desktop", async ({ page }) => {
     await page.goto("#/learn");
     await page.getByRole("heading", { name: "Learn", exact: true }).waitFor();

@@ -1,4 +1,16 @@
-import type { CallId, OutcomeId } from "../types";
+import type { CallId, FormationId, OutcomeId } from "../types";
+
+/**
+ * The expected play for a call + formation, used as the default outcome so a
+ * new combination opens on its most likely rep (the athlete can still toggle).
+ */
+export function defaultOutcome(call: CallId, formation: FormationId): OutcomeId {
+  if (formation === "empty") return "pass"; // no back — a drop-back look
+  const runFormation = formation === "i" || formation === "offset-i" || formation === "double";
+  if (call === "Power") return "run"; // run-support call
+  if (runFormation) return "run"; // heavy run personnel
+  return "pass"; // Blitz / Zone / Man out of neutral or spread looks
+}
 
 export interface CallMeta {
   id: CallId;

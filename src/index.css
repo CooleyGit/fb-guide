@@ -5,6 +5,15 @@
   --ss: #ef9600;
   --ss-dark: #c9790a;
   --ball: #637786;
+  /* Play-type colors (run / pass / balanced), used by tendency bars, the
+     "after the snap" selection, and the selected formation-card border.
+     QB run shares the run color. */
+  --run: #2e7d46;
+  --run-tint: #dcefe3;
+  --pass: #2b5fb0;
+  --pass-tint: #dde6f5;
+  --even: #5b6b78;
+  --even-tint: #e4e8eb;
   --field: #f1f6f2;
   --field-line: #dde7df;
   --field-hash: #9eb1a5;
@@ -583,10 +592,10 @@ button {
   border-color: var(--maroon);
 }
 .field-menu-panel {
-  position: absolute;
-  top: 50px;
-  right: 0;
-  min-width: 192px;
+  position: fixed;
+  z-index: 200;
+  width: 212px;
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -629,6 +638,54 @@ button {
 .field-menu-item svg {
   flex: none;
   color: var(--maroon);
+}
+/* Outcome-colored selection (After the snap) */
+.field-menu-item.outcome-run[aria-checked="true"],
+.field-menu-item.outcome-qb[aria-checked="true"] {
+  background: var(--run);
+  color: #fff;
+}
+.field-menu-item.outcome-pass[aria-checked="true"] {
+  background: var(--pass);
+  color: #fff;
+}
+.field-menu-item.outcome-run[aria-checked="true"] svg,
+.field-menu-item.outcome-qb[aria-checked="true"] svg,
+.field-menu-item.outcome-pass[aria-checked="true"] svg {
+  color: #fff;
+}
+
+/* Play menu — bottom-right field corner, opens up-and-left */
+.play-menu {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 20;
+}
+.play-menu-button:not([aria-expanded="true"]).outcome-run,
+.play-menu-button:not([aria-expanded="true"]).outcome-qb {
+  color: var(--run);
+}
+.play-menu-button:not([aria-expanded="true"]).outcome-pass {
+  color: var(--pass);
+}
+.play-menu-panel {
+  animation: playMenuIn 0.16s ease-out;
+}
+.menu-hint {
+  margin: 4px 10px 2px;
+  font-size: 11px;
+  color: var(--muted-ink);
+}
+@keyframes playMenuIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Field action chips (favorite / copy link) */
@@ -812,7 +869,12 @@ button {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* Stop-light phase cues: Before snap = red (stop), Read = yellow (decide),
+   React = green (go). */
 .phase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   min-height: 40px;
   padding: 6px 14px;
   border: 1px solid var(--border-strong);
@@ -820,13 +882,44 @@ button {
   border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--maroon-dark);
+  color: var(--ink);
   cursor: pointer;
 }
-.phase-chip[aria-pressed="true"] {
-  background: var(--ss);
-  border-color: var(--ss-dark);
-  color: #3a2300;
+.phase-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.phase-chip[data-phase="before"] .phase-dot {
+  background: #d13b3b;
+}
+.phase-chip[data-phase="read"] .phase-dot {
+  background: #e8b014;
+}
+.phase-chip[data-phase="react"] .phase-dot {
+  background: #1e8e3e;
+}
+.phase-chip[data-phase="before"][aria-pressed="true"] {
+  background: #d13b3b;
+  border-color: #b53030;
+  color: #fff;
+}
+.phase-chip[data-phase="read"][aria-pressed="true"] {
+  background: #f4c62e;
+  border-color: #d9a200;
+  color: #3a2e00;
+}
+.phase-chip[data-phase="react"][aria-pressed="true"] {
+  background: #1e8e3e;
+  border-color: #197a35;
+  color: #fff;
+}
+.phase-chip[aria-pressed="true"] .phase-dot {
+  background: rgba(255, 255, 255, 0.9);
+}
+.phase-chip[data-phase="read"][aria-pressed="true"] .phase-dot {
+  background: #3a2e00;
 }
 
 /* selection controls */
@@ -894,7 +987,7 @@ button {
 
 .formation-picker {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 8px;
 }
 .formation-card {
@@ -911,6 +1004,19 @@ button {
 .formation-card.selected {
   border-color: var(--maroon);
   box-shadow: inset 0 0 0 1px var(--maroon);
+}
+/* Selected border matches the card's play-type color. */
+.formation-card.lean-run.selected {
+  border-color: var(--run);
+  box-shadow: inset 0 0 0 1px var(--run);
+}
+.formation-card.lean-pass.selected {
+  border-color: var(--pass);
+  box-shadow: inset 0 0 0 1px var(--pass);
+}
+.formation-card.lean-neutral.selected {
+  border-color: var(--even);
+  box-shadow: inset 0 0 0 1px var(--even);
 }
 .mini-formation {
   width: calc(100% - 16px);
@@ -957,16 +1063,16 @@ button {
   flex: none;
 }
 .tendency-run {
-  background: #f1d7de;
-  color: var(--maroon-dark);
+  background: var(--run);
+  color: #fff;
 }
 .tendency-pass {
-  background: #d6e3f0;
-  color: #234a63;
+  background: var(--pass);
+  color: #fff;
 }
 .tendency-neutral {
-  background: #e2e6ea;
-  color: #434f59;
+  background: var(--even);
+  color: #fff;
 }
 
 /* ------------------------------------------------------------------ notes */

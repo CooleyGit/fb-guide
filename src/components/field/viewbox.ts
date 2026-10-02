@@ -9,9 +9,10 @@ export interface ViewBox {
   h: number;
 }
 
-// Content bounds in design units (logical * 10) with a little margin for the
-// rotated sideline labels and the hash labels below the field.
-export const CONTENT: ViewBox = { x: -40, y: 20, w: 1080, h: 950 };
+// Content bounds in design units (logical * 10) with margin for the rotated
+// sideline labels, the hash labels below, and breathing room above the
+// "Defense above · offense below" caption.
+export const CONTENT: ViewBox = { x: -40, y: -18, w: 1080, h: 1008 };
 
 function d(v: number): number {
   return v * DESIGN_SCALE;

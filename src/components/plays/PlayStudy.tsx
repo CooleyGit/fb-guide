@@ -12,7 +12,7 @@ import { PlayField } from "../field/PlayField";
 import { TipPopover, TipSheet } from "../field/Tips";
 import { FieldCaption, PlaybackControls } from "../field/PlaybackControls";
 import { PlayControls } from "./PlayControls";
-import { PlayVariation, type DirectionMode } from "./PlayVariation";
+import { PlayMenu, type DirectionMode } from "../field/PlayMenu";
 import { SelectedPlayNotes } from "./SelectedPlayNotes";
 import { Toast, useToast } from "../common/Toast";
 import { ChevronIcon, CoachIcon, EyeIcon, EyeOffIcon, GhostIcon, LinkIcon, PanelIcon, StarIcon } from "./icons";
@@ -214,6 +214,13 @@ function PlayStudyInner({
             }}
             extras={viewExtras}
           />
+          <PlayMenu
+            outcome={selection.outcome}
+            onOutcome={(o) => onChange({ outcome: o })}
+            directionMode={directionMode}
+            onDirectionMode={chooseDirection}
+            showDirection={!!scenario.finish}
+          />
           {tipProps ? isMobile ? <TipSheet {...tipProps} /> : <TipPopover {...tipProps} /> : null}
         </>
       }
@@ -274,13 +281,6 @@ function PlayStudyInner({
           </p>
           {field}
           <FieldCaption captions={scenario.captions} />
-          <PlayVariation
-            outcome={selection.outcome}
-            onOutcome={(o) => onChange({ outcome: o })}
-            directionMode={directionMode}
-            onDirectionMode={chooseDirection}
-            showDirection={!!scenario.finish}
-          />
           <PlaybackControls onRestart={handleRestart} />
           <p className="effort-note">{scenario.effortNote}</p>
           <div className="field-actions">

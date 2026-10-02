@@ -81,16 +81,29 @@ test("notes panel can be collapsed for a full-width field", async ({ page, viewp
   test.skip(!viewport || viewport.width <= 760, "desktop layout only");
   await page.goto(playUrl({ call: "Man", ball: "left", formation: "i", outcome: "run" }));
   await expect(page.locator(".notes-column")).toBeVisible();
+  await page.locator(".field-viewport").scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: "Field view options" }).click();
   await page.getByRole("menuitemcheckbox", { name: "Notes panel" }).click();
   await expect(page.locator(".notes-column")).toHaveCount(0);
 });
 
-test("choosing a run shows the ball-direction control", async ({ page }) => {
+test("the play menu changes the outcome and reveals the ball direction", async ({ page }) => {
   await page.goto(playUrl({ call: "Power", ball: "left", formation: "i", outcome: "pass" }));
-  await expect(page.getByRole("radio", { name: "Away from you" })).toHaveCount(0);
-  await page.getByRole("radio", { name: "Run", exact: true }).click();
-  await expect(page.getByRole("radio", { name: "Away from you" })).toBeVisible();
+  await page.getByRole("button", { name: /Change the play/ }).click();
+  await expect(page.getByRole("menuitemradio", { name: "Away from you" })).toHaveCount(0);
+  await page.getByRole("menuitemradio", { name: "Run", exact: true }).click();
+  await expect(page.getByRole("menuitemradio", { name: "Away from you" })).toBeVisible();
+});
+
+test("changing the formation snaps to the expected outcome", async ({ page }) => {
+  await page.goto(playUrl({ call: "Power", ball: "left", formation: "i", outcome: "pass" }));
+  // Open the selection controls if they are collapsed (phones).
+  const changeBtn = page.getByRole("button", { name: "Change selection" });
+  if (await changeBtn.count()) await changeBtn.click();
+  // Switching to Empty (pass-leaning) defaults the play to a pass.
+  await page.getByRole("radio", { name: "Empty 3×2" }).click();
+  await expect(page).toHaveURL(/outcome=pass/);
+  await expect(page.getByRole("button", { name: /Change the play — currently Pass/ })).toBeVisible();
 });
 
 test("opening a contextual tip shows an explanation", async ({ page }) => {

@@ -60,6 +60,15 @@ test.describe("mobile screenshots", () => {
     await shot(page, "power-i-left-run-midpoint");
   });
 
+  test("field view menu is not cropped on a phone", async ({ page }) => {
+    await page.goto(go({ call: "Man", ball: "left", formation: "trips", outcome: "run" }));
+    await page.locator(".field-viewport").scrollIntoViewIfNeeded();
+    await page.getByRole("button", { name: "Field view options" }).click();
+    await page.getByRole("menu", { name: "Field view options" }).waitFor();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `screenshots/${test.info().project.name}/field-menu-open.png` });
+  });
+
   test("Man · trips · left · hidden answers", async ({ page }) => {
     await page.goto(go({ call: "Man", ball: "left", formation: "trips", outcome: "pass" }));
     await page.getByRole("button", { name: "Field view options" }).click();
@@ -82,16 +91,22 @@ test.describe("mobile screenshots", () => {
     await page.waitForTimeout(250);
   };
 
+  const setDirection = async (page: Page, name: string) => {
+    await page.getByRole("button", { name: /Change the play/ }).click();
+    await page.getByRole("menuitemradio", { name }).click();
+    await page.keyboard.press("Escape");
+  };
+
   test("Power · I · left · run — tackle finish (strong)", async ({ page }) => {
     await page.goto(go({ call: "Power", ball: "left", formation: "i", outcome: "run" }));
-    await page.getByRole("radio", { name: "To your edge" }).click();
+    await setDirection(page, "To your edge");
     await scrub(page, 950);
     await shot(page, "power-i-left-run-finish");
   });
 
   test("Power · I · left · run — pursuit angle (away)", async ({ page }) => {
     await page.goto(go({ call: "Power", ball: "left", formation: "i", outcome: "run" }));
-    await page.getByRole("radio", { name: "Away from you" }).click();
+    await setDirection(page, "Away from you");
     await scrub(page, 760);
     await shot(page, "power-i-left-run-weak");
   });

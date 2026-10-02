@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Selection } from "../types";
 import { useAppState } from "../state/AppState";
+import { defaultOutcome } from "../data/calls";
 import {
   DEFAULT_SELECTION,
   parseSelectionParams,
@@ -34,7 +35,15 @@ export function PlaysPage() {
   );
 
   const onChange = useCallback(
-    (patch: Partial<Selection>) => applySelection({ ...selection, ...patch }),
+    (patch: Partial<Selection>) => {
+      const next = { ...selection, ...patch };
+      // Changing the call or formation (without explicitly setting an outcome)
+      // snaps to the expected play for that combination.
+      if (patch.outcome === undefined && (patch.call !== undefined || patch.formation !== undefined)) {
+        next.outcome = defaultOutcome(next.call, next.formation);
+      }
+      applySelection(next);
+    },
     [applySelection, selection],
   );
 

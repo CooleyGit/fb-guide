@@ -57,7 +57,7 @@ export function FormationPicker({
             type="button"
             role="radio"
             aria-checked={selected}
-            className={`formation-card${selected ? " selected" : ""}`}
+            className={`formation-card lean-${meta.tendency}${selected ? " selected" : ""}`}
             onClick={() => onChange(id)}
             title={meta.lean}
           >
