@@ -12,10 +12,12 @@ import { PlayField } from "../field/PlayField";
 import { TipPopover, TipSheet } from "../field/Tips";
 import { FieldCaption, PlaybackControls } from "../field/PlaybackControls";
 import { PlayControls } from "./PlayControls";
-import { PlayVariation } from "./PlayVariation";
+import { PlayVariation, type DirectionMode } from "./PlayVariation";
 import { SelectedPlayNotes } from "./SelectedPlayNotes";
 import { Toast, useToast } from "../common/Toast";
-import { ChevronIcon, CoachIcon, EyeIcon, EyeOffIcon, GhostIcon, LinkIcon, StarIcon } from "./icons";
+import { ChevronIcon, CoachIcon, EyeIcon, EyeOffIcon, GhostIcon, LinkIcon, PanelIcon, StarIcon } from "./icons";
+
+const rollDirection = (): RunDirection => (Math.random() < 0.5 ? "strong" : "weak");
 
 const SIDE_PILL: Record<Selection["side"], string> = {
   left: "Left hash",
@@ -63,7 +65,8 @@ function PlayStudyInner({
   onToggleHide: () => void;
   onOpenLesson: (lessonId: string) => void;
 }) {
-  const [runDirection, setRunDirection] = useState<RunDirection>("strong");
+  const [directionMode, setDirectionMode] = useState<DirectionMode>("random");
+  const [runDirection, setRunDirection] = useState<RunDirection>(rollDirection);
   const scenario = useMemo(() => deriveScenario(selection, { runDirection }), [selection, runDirection]);
   const { state, setPreference, addFavorite, removeFavorite, isFavorite } = useAppState();
   const prefs = state.preferences;
@@ -77,7 +80,17 @@ function PlayStudyInner({
   // Selection controls collapse on both desktop and mobile; open by default on
   // desktop, tucked away on phones.
   const [controlsOpen, setControlsOpen] = useState(!isMobile);
+  const [notesOpen, setNotesOpen] = useState(true);
   const [toast, showToast] = useToast();
+
+  const chooseDirection = (m: DirectionMode) => {
+    setDirectionMode(m);
+    setRunDirection(m === "random" ? rollDirection() : m);
+  };
+  // A fresh play-through re-rolls the direction when it's left on Random.
+  const handleRestart = () => {
+    if (directionMode === "random") setRunDirection(rollDirection());
+  };
   const invokerRef = useRef<HTMLElement | SVGElement | null>(null);
   const descId = useId();
 
@@ -178,6 +191,10 @@ function PlayStudyInner({
     { id: "hide", label: hideAnswers ? "Show answers" : "Hide answers", icon: <EyeOffIcon />, active: hideAnswers, onClick: onToggleHide },
     { id: "coach", label: "Coach view", icon: <CoachIcon />, active: prefs.coachView, onClick: () => setPreference({ coachView: !prefs.coachView }) },
     { id: "ghost", label: "SS ghost trail", icon: <GhostIcon />, active: prefs.ghost, onClick: () => setPreference({ ghost: !prefs.ghost }) },
+    // Collapsing the notes panel (desktop) gives the field the full width.
+    ...(isMobile
+      ? []
+      : [{ id: "notes", label: "Notes panel", icon: <PanelIcon />, active: notesOpen, onClick: () => setNotesOpen((o) => !o) }]),
   ];
 
   const field = (
@@ -249,7 +266,7 @@ function PlayStudyInner({
         </div>
       )}
 
-      <div className="study-grid">
+      <div className={`study-grid${notesOpen ? "" : " notes-hidden"}`}>
         <div className="field-column">
           <p className="viewpoint-note">
             Overhead view · defense on top. Your <strong>right</strong> is screen-left; your <strong>left</strong> is
@@ -260,11 +277,11 @@ function PlayStudyInner({
           <PlayVariation
             outcome={selection.outcome}
             onOutcome={(o) => onChange({ outcome: o })}
-            runDirection={runDirection}
-            onRunDirection={setRunDirection}
+            directionMode={directionMode}
+            onDirectionMode={chooseDirection}
             showDirection={!!scenario.finish}
           />
-          <PlaybackControls />
+          <PlaybackControls onRestart={handleRestart} />
           <p className="effort-note">{scenario.effortNote}</p>
           <div className="field-actions">
             <button type="button" className="action-chip" aria-pressed={favorite} onClick={toggleFavorite}>
@@ -284,9 +301,11 @@ function PlayStudyInner({
           />
         </div>
 
-        <div className="notes-column">
-          <SelectedPlayNotes scenario={scenario} hideAnswers={hideAnswers} onOpenLesson={onOpenLesson} />
-        </div>
+        {notesOpen && (
+          <div className="notes-column">
+            <SelectedPlayNotes scenario={scenario} hideAnswers={hideAnswers} onOpenLesson={onOpenLesson} />
+          </div>
+        )}
       </div>
 
       <Toast message={toast} />

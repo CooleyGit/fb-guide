@@ -8,46 +8,71 @@ const svg = (size: number, children: React.ReactNode) => (
   </svg>
 );
 
+// Shared football glyph (pointed ellipse + laces), centered at (cx, cy).
+function ball(cx: number, cy: number, l = 5, h = 3.2) {
+  return (
+    <>
+      <path
+        d={`M${cx - l} ${cy} Q${cx} ${cy - h} ${cx + l} ${cy} Q${cx} ${cy + h} ${cx - l} ${cy} Z`}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d={`M${cx - 2} ${cy} H${cx + 2}`} strokeWidth="1.1" strokeLinecap="round" />
+      <path
+        d={`M${cx - 1} ${cy - 1.1} V${cy + 1.1} M${cx + 1} ${cy - 1.1} V${cy + 1.1}`}
+        strokeWidth="1.1"
+        strokeLinecap="round"
+      />
+    </>
+  );
+}
+
 export function RunIcon({ size = 20 }: IconProps) {
-  // Downhill arrow — attacking the line.
+  // Ball driving forward on the ground.
   return svg(
     size,
     <>
-      <path d="M12 4 V17" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M6 12 L12 18 L18 12" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      {ball(7, 13)}
+      <path d="M13.5 13 H20 M17.5 10.3 L20 13 L17.5 15.7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </>,
   );
 }
 
 export function PassIcon({ size = 20 }: IconProps) {
-  // Arcing throw.
+  // Ball thrown on an arc through the air.
   return svg(
     size,
     <>
-      <path d="M4 18 Q12 2 20 11" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M20 11 L14 11 M20 11 L20 17" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 18 Q9 6 16 8.5" strokeWidth="1.5" strokeDasharray="1.5 3" strokeLinecap="round" />
+      <g transform="rotate(-32 16 7)">{ball(16, 7, 4.6, 3)}</g>
     </>,
   );
 }
 
 export function QBRunIcon({ size = 20 }: IconProps) {
-  // Scramble / keeper — a squiggle breaking out.
+  // Ball on a scramble / keeper path.
   return svg(
     size,
     <>
-      <path d="M4 7 C 9 15, 11 4, 16 12 C 17 14, 18 15, 19 15" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M19 15 L15 15 M19 15 L19 11" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      {ball(6, 13)}
+      <path d="M12.5 13 C 14 9.5, 15.2 16.5, 17 12.5" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M17 12.5 L14.8 12.5 M17 12.5 L17.6 14.8" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
     </>,
   );
 }
 
 export function NeutralIcon({ size = 20 }: IconProps) {
-  // Two-way: could go either way.
+  // Ball that could go either way.
   return svg(
     size,
     <>
-      <path d="M4 12 H20" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M7 9 L4 12 L7 15 M17 9 L20 12 L17 15" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      {ball(12, 12, 4.4, 2.9)}
+      <path
+        d="M5.5 12 H2.5 M4 10.6 L2.5 12 L4 13.4 M18.5 12 H21.5 M20 10.6 L21.5 12 L20 13.4"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </>,
   );
 }
@@ -180,6 +205,17 @@ export function CoachIcon({ size = 18 }: IconProps) {
       <path d="M4 6 H20 V15 H4 Z" strokeWidth="2" strokeLinejoin="round" />
       <path d="M8 10 H16 M8 12.5 H13" strokeWidth="1.8" strokeLinecap="round" />
       <path d="M9 15 L7 19 M15 15 L17 19" strokeWidth="2" strokeLinecap="round" />
+    </>,
+  );
+}
+
+export function PanelIcon({ size = 18 }: IconProps) {
+  // Two columns — toggles the side notes panel.
+  return svg(
+    size,
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" strokeWidth="2" />
+      <path d="M15 5 V19" strokeWidth="2" />
     </>,
   );
 }

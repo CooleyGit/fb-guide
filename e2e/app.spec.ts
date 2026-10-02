@@ -77,6 +77,15 @@ test("the field view menu switches to the whole-field view", async ({ page }) =>
   await expect(page.getByRole("menuitemradio", { name: "Whole field" })).toHaveAttribute("aria-checked", "true");
 });
 
+test("notes panel can be collapsed for a full-width field", async ({ page, viewport }) => {
+  test.skip(!viewport || viewport.width <= 760, "desktop layout only");
+  await page.goto(playUrl({ call: "Man", ball: "left", formation: "i", outcome: "run" }));
+  await expect(page.locator(".notes-column")).toBeVisible();
+  await page.getByRole("button", { name: "Field view options" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Notes panel" }).click();
+  await expect(page.locator(".notes-column")).toHaveCount(0);
+});
+
 test("choosing a run shows the ball-direction control", async ({ page }) => {
   await page.goto(playUrl({ call: "Power", ball: "left", formation: "i", outcome: "pass" }));
   await expect(page.getByRole("radio", { name: "Away from you" })).toHaveCount(0);

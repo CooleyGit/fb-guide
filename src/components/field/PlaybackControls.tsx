@@ -23,10 +23,26 @@ export function PhaseChips() {
   );
 }
 
-export function PlaybackControls() {
-  const { progress, isPlaying, toggle, replay, seek, speed, setSpeed, reduced } = usePlayback();
+export function PlaybackControls({ onRestart }: { onRestart?: () => void } = {}) {
+  const { progress, isPlaying, play, pause, replay, seek, speed, setSpeed, reduced } = usePlayback();
   const scrubRef = useRef<HTMLInputElement>(null);
   const dragging = useRef(false);
+
+  // A fresh play-through (replay, or play from the start/end) can re-roll a
+  // randomized play variation; resuming from a pause does not.
+  const playToggle = () => {
+    if (isPlaying) {
+      pause();
+      return;
+    }
+    const p = progress.get();
+    if (p === 0 || p >= 1) onRestart?.();
+    play();
+  };
+  const replayFromStart = () => {
+    onRestart?.();
+    replay();
+  };
 
   // Reflect the motion value into the range input without re-rendering per frame.
   useMotionValueEvent(progress, "change", (v) => {
@@ -42,11 +58,11 @@ export function PlaybackControls() {
     <div className="playback-controls">
       <div className="transport">
         {!reduced && (
-          <button type="button" className="transport-button primary" onClick={toggle} aria-label={isPlaying ? "Pause" : "Play"}>
+          <button type="button" className="transport-button primary" onClick={playToggle} aria-label={isPlaying ? "Pause" : "Play"}>
             {isPlaying ? "❚❚ Pause" : "▶ Play"}
           </button>
         )}
-        <button type="button" className="transport-button" onClick={replay} aria-label="Replay from the start">
+        <button type="button" className="transport-button" onClick={replayFromStart} aria-label="Replay from the start">
           ↻ {reduced ? "Reset" : "Replay"}
         </button>
         {!reduced && (

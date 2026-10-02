@@ -84,6 +84,7 @@ test.describe("mobile screenshots", () => {
 
   test("Power · I · left · run — tackle finish (strong)", async ({ page }) => {
     await page.goto(go({ call: "Power", ball: "left", formation: "i", outcome: "run" }));
+    await page.getByRole("radio", { name: "To your edge" }).click();
     await scrub(page, 950);
     await shot(page, "power-i-left-run-finish");
   });

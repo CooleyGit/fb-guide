@@ -39,7 +39,7 @@ export const SCHEMA_VERSION = 1;
 
 export const DEFAULT_PREFERENCES: Preferences = {
   tips: true,
-  fieldView: "detail",
+  fieldView: "fit",
   motion: "system",
   coachView: false,
   ghost: false,

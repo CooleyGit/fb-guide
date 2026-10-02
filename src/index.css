@@ -214,6 +214,9 @@ button {
   gap: 20px;
   align-items: start;
 }
+.study-grid.notes-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
 .field-column {
   display: flex;
   flex-direction: column;
@@ -541,26 +544,20 @@ button {
   color: #fff;
   border-color: var(--maroon);
 }
-.variation-direction {
+.direction-group {
   display: flex;
-  gap: 6px;
+  flex: 1;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
 }
-.variation-dir {
-  min-height: 40px;
-  padding: 6px 12px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
-  color: var(--maroon-dark);
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
+.direction-group .segmented-track {
+  flex: 1;
 }
-.variation-dir[aria-checked="true"] {
-  background: var(--ss);
-  border-color: var(--ss-dark);
-  color: #3a2300;
+.direction-hint {
+  font-size: 12px;
+  color: var(--muted-ink);
+  flex-basis: 100%;
 }
 
 /* Field view menu (floating control in the field corner) */

@@ -161,7 +161,7 @@ function PracticeRep({
   onEnd: () => void;
 }) {
   const scenario = useMemo(() => deriveScenario(selection), [selection]);
-  const [view, setView] = useState<FieldView>("detail");
+  const [view, setView] = useState<FieldView>("fit");
   const [resetSignal, setResetSignal] = useState(0);
 
   return (
