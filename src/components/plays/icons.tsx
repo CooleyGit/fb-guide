@@ -183,9 +183,8 @@ export function ReplayIcon({ size = 20 }: IconProps) {
 }
 
 
-export function PlaybookIcon({ size = 18 }: IconProps) {
-  // Playbook diagram — "call a new play": two O's and two X's on the left, with
-  // the route arrow sweeping up the right side.
+export function StrategyIcon({ size = 18 }: IconProps) {
+  // Loose play diagram (two O's, two X's, route arrow) — used to shuffle a call.
   return svg(
     size,
     <>
@@ -195,6 +194,35 @@ export function PlaybookIcon({ size = 18 }: IconProps) {
       <path d="M9.8 9.3 L13.2 12.7 M13.2 9.3 L9.8 12.7" strokeWidth="1.8" strokeLinecap="round" />
       <path d="M5 18.5 L18.5 18.5 L18.5 8.5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M16 11 L18.5 8.3 L21 11" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </>,
+  );
+}
+
+export function PlaybookIcon({ size = 18 }: IconProps) {
+  // A simple play-call clipboard (reads clearly at small sizes).
+  return svg(
+    size,
+    <>
+      {/* Clipboard body (gap at the top for the clip). */}
+      <path
+        d="M9 4 H6.5 A2 2 0 0 0 4.5 6 V20 A2 2 0 0 0 6.5 22 H17.5 A2 2 0 0 0 19.5 20 V6 A2 2 0 0 0 17.5 4 H15"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect x="9" y="2.3" width="6" height="3.4" rx="1.3" strokeWidth="1.7" />
+      <path d="M8 11 H16 M8 14.5 H16 M8 18 H12.5" strokeWidth="1.6" strokeLinecap="round" />
+    </>,
+  );
+}
+
+export function InfoIcon({ size = 18 }: IconProps) {
+  return svg(
+    size,
+    <>
+      <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+      <path d="M12 11 V16.5" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="7.8" r="1.15" fill="currentColor" stroke="none" />
     </>,
   );
 }

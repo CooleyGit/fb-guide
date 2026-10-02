@@ -283,6 +283,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  scroll-margin-top: 12px;
 }
 .scenario-title {
   margin: 0;
@@ -657,6 +658,82 @@ button {
   border-radius: 8px;
   font-size: 15px;
   min-height: 42px;
+}
+
+/* Mobile: coaching tip is a pulsing info button in the field corner, next to
+   the field-shuffle control, with a floating (fixed) popover. */
+.caption-info-wrap {
+  position: absolute;
+  top: 15px;
+  left: 60px;
+  z-index: 20;
+}
+.caption-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px dashed var(--ss-dark);
+  background: #fff5dc;
+  color: var(--ss-dark);
+  cursor: pointer;
+  opacity: 0.6; /* muted until the play has run */
+}
+.caption-info.pulsing {
+  opacity: 1;
+  animation: caption-pulse 1.5s ease-in-out infinite;
+}
+.caption-info.open {
+  opacity: 1;
+  animation: none;
+  border-style: solid;
+}
+@keyframes caption-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 150, 0, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 150, 0, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caption-info.pulsing {
+    animation: none;
+  }
+}
+.caption-pop {
+  position: fixed; /* viewport-relative, so the field's overflow can't clip it.
+                      left/width are set inline to match the field card. */
+  z-index: 60;
+  background: #fff5dc;
+  border: 1px solid var(--ss);
+  border-left: 4px solid var(--ss);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  animation: caption-pop-in 0.24s ease-out;
+}
+/* Slides up into place above the field card. */
+@keyframes caption-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caption-pop {
+    animation: none;
+  }
 }
 .effort-note {
   margin: 0;
@@ -1075,7 +1152,7 @@ button {
 .scrubber input[type="range"] {
   width: 100%;
   accent-color: var(--maroon);
-  min-height: 32px;
+  min-height: 16px;
 }
 .phase-chips {
   display: flex;
@@ -1775,6 +1852,7 @@ details summary {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  scroll-margin-top: 20px;
 }
 .chip {
   background: var(--maroon-tint);
@@ -1795,6 +1873,42 @@ details summary {
   background: #e7eaee;
   color: #5c6672;
 }
+/* "Shouted call": a quick pop + bg blip with two pulsing rings coming off the
+   Assignment and strength pills when a new call is made. */
+.chip-shout {
+  animation: chip-shout-pop 0.9s ease-out both, chip-shout-ring 0.5s ease-out 2;
+}
+@keyframes chip-shout-pop {
+  0% {
+    transform: scale(1);
+  }
+  18% {
+    transform: scale(1.16);
+    background: var(--maroon);
+    color: #fff;
+  }
+  55% {
+    transform: scale(1.04);
+    background: var(--maroon);
+    color: #fff;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes chip-shout-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(128, 0, 32, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 11px rgba(128, 0, 32, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip-shout {
+    animation: none;
+  }
+}
 .outcome-chip svg {
   flex: none;
 }
@@ -1810,6 +1924,7 @@ details summary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto; /* keep it pinned to the right of the pills */
   min-height: 40px;
   padding: 6px 14px;
   border: 1px solid var(--border-strong);
@@ -1905,20 +2020,55 @@ details summary {
     min-height: 0;
   }
   .app-content {
+    /* Breathing room on phones (Learn/Practice/footer); keep nav clearance. */
     padding: 14px 12px calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+  /* On Plays, the field card goes edge-to-edge for width; the rest of the page
+     (title, pills, favorites) keeps the 12px breathing room. */
+  .plays-page .play-study {
+    margin-inline: -12px;
+    border-radius: 0;
+    border: 0;
   }
   .chip {
     font-size: 10px;
   }
   .selection-toggle {
-    font-size: 10px;
-    min-height: 30px;
-    padding: 4px 10px;
-    gap: 4px;
+    min-height: 32px;
+    padding: 7px;
+    gap: 0;
   }
-  .selection-toggle svg {
-    width: 13px;
-    height: 13px;
+  /* Icon-only on phones. */
+  .selection-toggle-text {
+    display: none;
+  }
+  /* The field renders small on phones — bump the on-field text for legibility. */
+  .field-svg .player-label {
+    font-size: 27px;
+  }
+  .field-svg .answer-label {
+    font-size: 25px;
+  }
+  .field-svg .read-hint-label {
+    font-size: 24px;
+  }
+  .field-svg .finish-label {
+    font-size: 27px;
+  }
+  .field-svg .top-label {
+    font-size: 27px;
+  }
+  .field-svg .hash-label {
+    font-size: 24px;
+  }
+  .field-svg .field-label {
+    font-size: 25px;
+  }
+  .field-svg .boundary-label {
+    font-size: 23px;
+  }
+  .field-svg .los-label {
+    font-size: 22px;
   }
   .bottom-nav {
     display: flex;

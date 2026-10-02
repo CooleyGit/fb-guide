@@ -13,13 +13,12 @@ import { FieldViewport } from "../field/FieldViewport";
 import { FieldViewMenu, type ViewMenuExtra } from "../field/FieldViewMenu";
 import { PlayField } from "../field/PlayField";
 import { TipPopover, TipSheet } from "../field/Tips";
-import { FieldCaption, FieldTransport, PlaybackScrubber } from "../field/PlaybackControls";
+import { FieldCaption, FieldCaptionInfo, FieldTransport, PlaybackScrubber } from "../field/PlaybackControls";
 import { PlayControls } from "./PlayControls";
 import { PlayMenu } from "../field/PlayMenu";
 import { SelectedPlayNotes } from "./SelectedPlayNotes";
 import { Toast, useToast } from "../common/Toast";
 import {
-  ChevronIcon,
   CoachIcon,
   EyeIcon,
   EyeOffIcon,
@@ -32,6 +31,7 @@ import {
   QBRunIcon,
   RunIcon,
   StarIcon,
+  StrategyIcon,
 } from "./icons";
 
 function pick<T>(items: readonly T[]): T {
@@ -173,6 +173,9 @@ function PlayStudyInner({
 
   const [mode, setMode] = useState<FieldView>(prefs.fieldView);
   const [resetSignal, setResetSignal] = useState(0);
+  // Bumped whenever a new call is made, to re-fire the "shouted call" effect on
+  // the Assignment + strength pills.
+  const [shoutKey, setShoutKey] = useState(1);
   const [openTip, setOpenTip] = useState<Hotspot | null>(null);
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
   // Selection controls collapse on both desktop and mobile; open by default on
@@ -213,6 +216,7 @@ function PlayStudyInner({
     onChange({ outcome: rollOutcome(selection.formation) });
     setRunDirection(rollDirection());
     setPassTarget(pick(["curl", "flat", "away"] as const));
+    setShoutKey((k) => k + 1);
   };
   // Shuffle the whole scenario: new call, ball/strength, and formation, with the
   // outcome weighted by the new formation's lean. It lands pre-snap (paused) so
@@ -222,9 +226,17 @@ function PlayStudyInner({
     onChange({ call: pick(CALL_ORDER), side: pick(SIDE_ORDER), formation, outcome: rollOutcome(formation) });
     setRunDirection(rollDirection());
     setPassTarget(pick(["curl", "flat", "away"] as const));
+    setShoutKey((k) => k + 1);
   };
   const invokerRef = useRef<HTMLElement | SVGElement | null>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const pillsRef = useRef<HTMLDivElement>(null);
   const descId = useId();
+
+  // A shuffle changes the title/call, so scroll up to show it. Play/refresh pull
+  // the summary pills to the top (with a little breathing room) to frame the rep.
+  const scrollToTop = () => headRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const focusPills = () => pillsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   // Keep local mode in sync if the stored default changes elsewhere.
   useEffect(() => setMode(prefs.fieldView), [prefs.fieldView]);
@@ -339,11 +351,15 @@ function PlayStudyInner({
               className="field-menu-button"
               aria-label="New call — shuffle the assignment, ball, and formation"
               title="New call (shuffle)"
-              onClick={shuffleSelection}
+              onClick={() => {
+                shuffleSelection();
+                scrollToTop();
+              }}
             >
-              <PlaybookIcon size={20} />
+              <StrategyIcon size={20} />
             </button>
           </div>
+          <FieldCaptionInfo captions={scenario.captions} />
           <FieldViewMenu
             mode={mode}
             onMode={setFieldView}
@@ -376,7 +392,7 @@ function PlayStudyInner({
             onPassTarget={choosePassTarget}
             showDirection={showsDirection(selection)}
           />
-          <FieldTransport onRestart={handleRestart} />
+          <FieldTransport onRestart={handleRestart} onFocusView={focusPills} />
           {tipProps ? isMobile ? <TipSheet {...tipProps} /> : <TipPopover {...tipProps} /> : null}
         </>
       }
@@ -405,7 +421,7 @@ function PlayStudyInner({
           screen-right.
         </div>
       )}
-      <div className="scenario-head">
+      <div className="scenario-head" ref={headRef}>
         <h2 className="scenario-title">{scenario.scenarioTitle}</h2>
         <p className="scenario-sub" aria-live="polite">
           {hideAnswers ? "Answers hidden — explain your job, then reveal." : scenario.content.outcomeNote}
@@ -413,9 +429,13 @@ function PlayStudyInner({
       </div>
 
       <div className="selection-summary">
-        <div className="summary-pills">
-          <span className="chip">{selection.call}</span>
-          <span className="chip">{scenario.ssSide === "RIGHT" ? "RIVER" : "LASO"}</span>
+        <div className="summary-pills" ref={pillsRef}>
+          <span key={`call-${shoutKey}`} className="chip chip-shout">
+            {selection.call}
+          </span>
+          <span key={`str-${shoutKey}`} className="chip chip-shout">
+            {scenario.ssSide === "RIGHT" ? "RIVER" : "LASO"}
+          </span>
           <OutcomePill
             outcome={selection.outcome}
             direction={runDirection}
@@ -428,10 +448,11 @@ function PlayStudyInner({
           type="button"
           className="selection-toggle"
           aria-expanded={controlsOpen}
+          aria-label={controlsOpen ? "Hide selection" : "Change selection"}
           onClick={() => setControlsOpen((o) => !o)}
         >
-          <ChevronIcon open={controlsOpen} />
-          {controlsOpen ? "Hide selection" : "Change selection"}
+          <PlaybookIcon size={16} />
+          <span className="selection-toggle-text">{controlsOpen ? "Hide selection" : "Change selection"}</span>
         </button>
       </div>
 

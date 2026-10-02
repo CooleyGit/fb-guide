@@ -235,7 +235,7 @@ export function PreSnapRead({ at, label }: { at: Point; label: string }) {
   return (
     <motion.g className="read-hint" transform={`translate(${at.x * S} ${at.y * S})`} style={{ opacity }} aria-hidden="true">
       <circle className="read-hint-ring" cx={0} cy={0} r={34} />
-      <text className="read-hint-label" x={0} y={-46} textAnchor="middle">
+      <text className="read-hint-label" x={0} y={-62} textAnchor="middle">
         {label}
       </text>
     </motion.g>
@@ -255,7 +255,8 @@ export function FinishBurst({ finish }: { finish: Finish }) {
       aria-hidden="true"
     >
       <motion.circle className="finish-ring" cx={0} cy={0} r={32} style={{ scale }} />
-      <text className="finish-label" x={0} y={-42} textAnchor="middle">
+      {/* Below the ring: SS-path and route labels sit above, so this avoids them. */}
+      <text className="finish-label" x={0} y={56} textAnchor="middle">
         {finish.label}
       </text>
     </motion.g>

@@ -298,7 +298,9 @@ function buildMotion(
     // label at the catch point.
     if (label) setSS(frames, label, { x: align.x + sign * 3, y: 24 });
     else setSS(frames);
-    finish = { at: { x: routeEnd.x, y: routeEnd.y }, kind: "tackle", label: man ? "CONTEST" : "BREAK ON IT", from: FINISH_FROM };
+    // Center the finish burst on where the SS actually ends (the contest point),
+    // so the SS marker sits inside the ring.
+    finish = { at: { x: contest.x, y: contest.y }, kind: "tackle", label: man ? "CONTEST" : "BREAK ON IT", from: FINISH_FROM };
   };
 
   // Offense pass-protects: the line kick-slides into a pocket and a back stays in
@@ -562,7 +564,7 @@ function buildMotion(
     const routeEnd = developPass();
     addPassPro();
     // Trail the route in phase and contest at the catch (outside leverage on a TE).
-    coverPass(routeEnd, "MATCH No. 2", true, isTE);
+    coverPass(routeEnd, null, true, isTE);
     captions.push(
       base(beforeCap),
       { phase: "read", text: "He releases—stay with your man." },
