@@ -1,49 +1,63 @@
 # Football Guide
 
-An interactive strong safety study guide built around TCU 4–2–5 defensive concepts, written for new junior-high and high-school football players.
+An interactive strong-safety study tool built around TCU 4–2–5 defensive concepts, written for new junior-high and high-school football players.
 
 **Know the call. Trust your read. Own your edge. Make the next play count.**
 
+This is a React + TypeScript + Vite application. It replaces the earlier single-file `index.html`; that original page is preserved for reference (see [Legacy page](#legacy-page)).
+
 ## What you can study
 
-- Power, Blitz, Zone, and Man assignment examples.
-- Eight offensive looks: trips, balanced 2×2, pro set, double tight end, empty, I-formation, offset I, and pistol.
-- Ball location, strength, alignment, and receiver matchups.
-- At-the-snap, run, pass, and quarterback-run responses.
-- Formation-specific tips, expandable coaching notes, and football vocabulary.
-- An eye button to hide defensive answers and test your understanding.
-
-## Use the guide
-
-Choose an assignment, ball location/strength, and offensive formation. Before showing the answer, identify your alignment, your key, and your job. Select a play outcome to see the example response. Open **Info** for tips tied to your selection.
-
-On a phone, swipe across the field to explore it. **Fit field** shows the whole diagram; **Zoom field** restores larger players and labels.
+- **Plays** — a large interactive field. Choose an assignment (Power, Blitz, Zone, Man), ball/strength, and one of eight formations; tap players or info pins for contextual coaching; play, pause, replay, and step through **Before snap → Read → React**; hide the answers to test yourself; and save or share a rep.
+- **Practice** — short hidden-answer rep sessions. Say your alignment, key, and job, then reveal and self-review (**Got it / Review again**). Reps you flag collect in a review queue.
+- **Learn** — searchable football vocabulary and short lessons grouped by topic, with “Try it on the field” links into supported plays.
 
 **Defense is on top and offense is below.** Left/right labels follow the defender facing the offense: the defender’s right is screen-left, and the defender’s left is screen-right.
 
 ## Run locally
 
-Save the guide as `index.html` and open it in a browser. HTML, CSS, JavaScript, and field graphics are contained in that one file. No build step, package installation, or application server is required.
+Requires Node (see [`.nvmrc`](.nvmrc) — Node 24; Node ≥ 20.19 works).
 
-Message and file previews may disable JavaScript. Open the page in a full browser for the interactive controls. Coaching-reference links require an internet connection.
+```bash
+npm install        # install dependencies (uses the committed package-lock.json)
+npm run dev        # start the Vite dev server
+npm run build      # type-check and build the production bundle into dist/
+npm run preview    # serve the built bundle at the production base path (/fb-guide/)
+npm run typecheck  # type-check only
+npm test           # run unit/integration tests (Vitest)
+npm run e2e        # run browser tests (Playwright: Chromium, WebKit, mobile)
+```
+
+The app is **not** a double-click standalone HTML file anymore — it is a built single-page app. Use `npm run dev` while developing and `npm run preview` to check the production build.
+
+For browser tests, install the browsers once with `npx playwright install chromium webkit`. `npm run e2e` builds the app and serves it at `http://localhost:4173/fb-guide/` automatically.
 
 ## Publish on GitHub Pages
 
-Keep `index.html` and this `README.md` at the root of the `fb-guide` repository.
+The repository is configured to build and deploy with **GitHub Actions** (see [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)). Serving the raw source through the old “Deploy from a branch” setting will **not** work for the built React app.
 
-1. Commit and push the files to `main`.
-2. Open the repository’s **Settings → Pages**.
-3. Under **Build and deployment**, choose **Deploy from a branch**.
-4. Select **main** and **/(root)**, then click **Save**.
-5. Wait for deployment to finish, then open the published link.
+1. In the repository, open **Settings → Pages**.
+2. Under **Build and deployment → Source**, change from **Deploy from a branch** to **GitHub Actions**.
+3. Push to `main` (or run the workflow). The workflow installs from the lockfile, type-checks, tests, builds, uploads `dist`, and deploys with GitHub Pages’ official actions.
+4. Pull-request runs validate and build but **do not** publish.
 
-For the `CooleyGit/fb-guide` repository, the expected address is:
+For the `CooleyGit/fb-guide` repository, the published address is:
 
 **https://cooleygit.github.io/fb-guide/**
 
-Free GitHub Pages hosting requires a public repository. See [GitHub’s publishing instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+Vite’s `base` is set to `/fb-guide/`, and the app uses hash routes (`#/plays`, `#/practice`, `#/learn`) so bookmarked destinations and shared rep links reload correctly on GitHub Pages without server rewrites. A shared rep looks like:
 
-To update the guide, replace `index.html` and push the change to `main`. GitHub Pages will publish the updated file.
+```
+https://cooleygit.github.io/fb-guide/#/plays?call=Man&formation=i&ball=left&outcome=pass
+```
+
+Free GitHub Pages hosting requires a public repository.
+
+### Legacy page
+
+The original standalone guide is kept at [`public/legacy-guide.html`](public/legacy-guide.html) and ships at:
+
+**https://cooleygit.github.io/fb-guide/legacy-guide.html**
 
 ## Coaching foundation
 
