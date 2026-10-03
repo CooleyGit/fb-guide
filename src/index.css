@@ -660,26 +660,35 @@ button {
   min-height: 42px;
 }
 
-/* Mobile: coaching tip is a pulsing info button in the field corner, next to
-   the field-shuffle control, with a floating (fixed) popover. */
-.caption-info-wrap {
-  position: absolute;
-  top: 15px;
-  left: 60px;
-  z-index: 20;
-}
+/* Mobile coaching tip: a phase-colored info toggle at the right of the phase
+   chips, opening a full-width tip above the effort note. Colors follow the
+   current step (before = red, read = yellow, react = green). */
 .caption-info {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  margin-left: auto; /* push to the right of the phase chips */
   border-radius: 50%;
-  border: 2px dashed var(--ss-dark);
-  background: #fff5dc;
-  color: var(--ss-dark);
+  border: 2px solid currentColor;
+  background: var(--surface);
   cursor: pointer;
-  opacity: 0.6; /* muted until the play has run */
+  opacity: 0.78; /* a touch muted pre-snap */
+  --pulse: 209, 59, 59;
+}
+.caption-info[data-phase="before"] {
+  color: #d13b3b;
+  --pulse: 209, 59, 59;
+}
+.caption-info[data-phase="read"] {
+  color: #c98f00;
+  --pulse: 232, 176, 20;
+}
+.caption-info[data-phase="react"] {
+  color: #1e8e3e;
+  --pulse: 30, 142, 62;
 }
 .caption-info.pulsing {
   opacity: 1;
@@ -687,16 +696,27 @@ button {
 }
 .caption-info.open {
   opacity: 1;
-  animation: none;
-  border-style: solid;
+  color: #fff;
+}
+.caption-info.open[data-phase="before"] {
+  background: #d13b3b;
+  border-color: #d13b3b;
+}
+.caption-info.open[data-phase="read"] {
+  background: #e2a900;
+  border-color: #e2a900;
+}
+.caption-info.open[data-phase="react"] {
+  background: #1e8e3e;
+  border-color: #1e8e3e;
 }
 @keyframes caption-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(239, 150, 0, 0.5);
+    box-shadow: 0 0 0 0 rgba(var(--pulse), 0.5);
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(239, 150, 0, 0);
+    box-shadow: 0 0 0 7px rgba(var(--pulse), 0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -704,26 +724,34 @@ button {
     animation: none;
   }
 }
+/* Full-width tip above the effort note (in flow, so it never shifts the field). */
 .caption-pop {
-  position: fixed; /* viewport-relative, so the field's overflow can't clip it.
-                      left/width are set inline to match the field card. */
-  z-index: 60;
-  background: #fff5dc;
-  border: 1px solid var(--ss);
-  border-left: 4px solid var(--ss);
+  margin: 0;
+  border: 1px solid;
+  border-left-width: 4px;
   border-radius: 10px;
   padding: 10px 13px;
   font-size: 14px;
   line-height: 1.4;
   color: var(--ink);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
-  animation: caption-pop-in 0.24s ease-out;
+  animation: caption-pop-in 0.22s ease-out;
 }
-/* Slides up into place above the field card. */
+.caption-pop[data-phase="before"] {
+  background: #fdecec;
+  border-color: #d13b3b;
+}
+.caption-pop[data-phase="read"] {
+  background: #fdf6e1;
+  border-color: #e2a900;
+}
+.caption-pop[data-phase="react"] {
+  background: #e8f5ec;
+  border-color: #1e8e3e;
+}
 @keyframes caption-pop-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
@@ -815,12 +843,23 @@ button {
   right: 10px;
   z-index: 20;
 }
-/* Shuffle-the-scenario control (top-left of the field) */
+/* Shuffle-the-scenario control (top-left of the field) — the main "new call"
+   button, so it stands out: a dark maroon circle. */
 .field-shuffle {
   position: absolute;
   top: 10px;
   left: 10px;
   z-index: 20;
+}
+.field-shuffle .field-menu-button {
+  background: var(--maroon);
+  color: #fff;
+  border-color: var(--maroon);
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(128, 0, 32, 0.4);
+}
+.field-shuffle .field-menu-button:hover {
+  background: var(--maroon-dark);
 }
 .field-menu-button {
   width: 44px;
@@ -2031,7 +2070,7 @@ details summary {
     border: 0;
   }
   .chip {
-    font-size: 10px;
+    font-size: 11px;
   }
   .selection-toggle {
     min-height: 32px;
@@ -2044,7 +2083,7 @@ details summary {
   }
   /* The field renders small on phones — bump the on-field text for legibility. */
   .field-svg .player-label {
-    font-size: 27px;
+    font-size: 23px;
   }
   .field-svg .answer-label {
     font-size: 25px;
@@ -2069,6 +2108,16 @@ details summary {
   }
   .field-svg .los-label {
     font-size: 22px;
+  }
+  /* Smaller phase chips to make room for the info toggle at the row's right. */
+  .phase-chips {
+    gap: 6px;
+  }
+  .phase-chip {
+    font-size: 11px;
+    min-height: 32px;
+    padding: 5px 9px;
+    gap: 5px;
   }
   .bottom-nav {
     display: flex;

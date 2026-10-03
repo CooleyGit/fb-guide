@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useMotionValueEvent } from "motion/react";
 import type { Caption } from "../../types";
 import { SPEED_OPTIONS, usePlayback } from "../../anim/playback";
 import { PHASE_LABELS, PHASE_ORDER } from "../../anim/interpolate";
 import { useIsMobile } from "../../hooks/useMediaQuery";
-import { InfoIcon, PauseIcon, PlayIcon, ReplayIcon } from "../plays/icons";
+import { PauseIcon, PlayIcon, ReplayIcon } from "../plays/icons";
 
 /** In-field transport: play/pause (replays the same play when done), a refresh
  * that randomizes a new rep, and the speed toggle. */
@@ -77,7 +77,7 @@ export function FieldTransport({ onRestart, onFocusView }: { onRestart?: () => v
   );
 }
 
-function PhaseChips() {
+function PhaseChips({ trailing }: { trailing?: ReactNode }) {
   const { phase, seekPhase } = usePlayback();
   return (
     <div className="phase-chips" role="group" aria-label="Play phases">
@@ -94,12 +94,13 @@ function PhaseChips() {
           {PHASE_LABELS[p]}
         </button>
       ))}
+      {trailing}
     </div>
   );
 }
 
-/** Below-field scrubber + phase chips. */
-export function PlaybackScrubber() {
+/** Below-field scrubber + phase chips (with an optional trailing control). */
+export function PlaybackScrubber({ captionToggle }: { captionToggle?: ReactNode }) {
   const { progress, seek } = usePlayback();
   const scrubRef = useRef<HTMLInputElement>(null);
   const dragging = useRef(false);
@@ -129,7 +130,7 @@ export function PlaybackScrubber() {
           onInput={(e) => seek(Number((e.target as HTMLInputElement).value) / 1000)}
         />
       </label>
-      <PhaseChips />
+      <PhaseChips trailing={captionToggle} />
     </div>
   );
 }
@@ -147,76 +148,3 @@ export function FieldCaption({ captions }: { captions: Caption[] }) {
   );
 }
 
-/**
- * Mobile: a pulsing info button that lives next to the field-shuffle control.
- * It opens a floating tip (position:fixed, so it isn't clipped by the field and
- * never pushes the field up or down).
- */
-export function FieldCaptionInfo({ captions }: { captions: Caption[] }) {
-  const { phase } = usePlayback();
-  const isMobile = useIsMobile();
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const popRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ bottom: number; left: number; width: number } | null>(null);
-  const caption = captions.find((c) => c.phase === phase);
-  // Only draw attention (pulse) once the play is underway/has run; muted pre-snap.
-  const played = phase !== "before";
-
-  const reposition = () => {
-    const btn = btnRef.current;
-    if (!btn) return;
-    // Align the bar to the field card and sit it just above the card's top edge.
-    const field = (btn.closest(".field-viewport") as HTMLElement | null) ?? btn;
-    const r = field.getBoundingClientRect();
-    setPos({ bottom: window.innerHeight - r.top + 6, left: r.left, width: r.width });
-  };
-
-  useLayoutEffect(() => {
-    if (open) reposition();
-  }, [open]);
-
-  // Stays locked open once tapped; close with the button again or Escape. (No
-  // outside-tap close.)
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    const onMove = () => reposition();
-    document.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", onMove, true);
-    window.addEventListener("resize", onMove);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      window.removeEventListener("scroll", onMove, true);
-      window.removeEventListener("resize", onMove);
-    };
-  }, [open]);
-
-  if (!isMobile || !caption) return null;
-
-  return (
-    <div className="caption-info-wrap" onPointerDown={(e) => e.stopPropagation()}>
-      <button
-        ref={btnRef}
-        type="button"
-        className={`caption-info${played ? " pulsing" : ""}${open ? " open" : ""}`}
-        aria-expanded={open}
-        aria-label="Coaching tip"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <InfoIcon size={18} />
-      </button>
-      {open && pos && (
-        <div
-          ref={popRef}
-          className="caption-pop"
-          style={{ bottom: pos.bottom, left: pos.left, width: pos.width }}
-          role="status"
-          aria-live="polite"
-        >
-          {caption.text}
-        </div>
-      )}
-    </div>
-  );
-}

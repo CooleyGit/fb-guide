@@ -56,9 +56,9 @@ export const X = {
 
 /** Marker radii in design units. */
 export const R = {
-  defender: 20,
-  ss: 25,
-  offense: 15, // half-size of the offense square (so square is 30x30)
+  defender: 22, // room for two-letter labels (CB/FS/WS)
+  ss: 26,
+  offense: 17, // half-size of the offense square (34x34) — more padding around the letter
   pin: 15,
 } as const;
 

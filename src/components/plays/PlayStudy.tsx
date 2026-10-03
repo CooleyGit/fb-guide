@@ -13,7 +13,7 @@ import { FieldViewport } from "../field/FieldViewport";
 import { FieldViewMenu, type ViewMenuExtra } from "../field/FieldViewMenu";
 import { PlayField } from "../field/PlayField";
 import { TipPopover, TipSheet } from "../field/Tips";
-import { FieldCaption, FieldCaptionInfo, FieldTransport, PlaybackScrubber } from "../field/PlaybackControls";
+import { FieldCaption, FieldTransport, PlaybackScrubber } from "../field/PlaybackControls";
 import { PlayControls } from "./PlayControls";
 import { PlayMenu } from "../field/PlayMenu";
 import { SelectedPlayNotes } from "./SelectedPlayNotes";
@@ -23,6 +23,7 @@ import {
   EyeIcon,
   EyeOffIcon,
   GhostIcon,
+  InfoIcon,
   LinkIcon,
   NeutralIcon,
   PanelIcon,
@@ -169,7 +170,7 @@ function PlayStudyInner({
   const { state, setPreference, addFavorite, removeFavorite, isFavorite } = useAppState();
   const prefs = state.preferences;
   const isMobile = useIsMobile();
-  const { pause, seek, replay } = usePlayback();
+  const { pause, seek, replay, phase } = usePlayback();
 
   const [mode, setMode] = useState<FieldView>(prefs.fieldView);
   const [resetSignal, setResetSignal] = useState(0);
@@ -182,7 +183,17 @@ function PlayStudyInner({
   // desktop, tucked away on phones.
   const [controlsOpen, setControlsOpen] = useState(!isMobile);
   const [notesOpen, setNotesOpen] = useState(true);
+  // Mobile coaching tip: a phase-colored info toggle in the phase-chip row that
+  // opens a full-width tip above the effort note; stays locked open until toggled.
+  const [captionOpen, setCaptionOpen] = useState(false);
   const [toast, showToast] = useToast();
+  const currentCaption = scenario.captions.find((c) => c.phase === phase);
+  useEffect(() => {
+    if (!captionOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setCaptionOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [captionOpen]);
   // The orientation note shows briefly on load, then fades out.
   const [viewpointPhase, setViewpointPhase] = useState<"in" | "out" | "gone">("in");
   useEffect(() => {
@@ -235,8 +246,14 @@ function PlayStudyInner({
 
   // A shuffle changes the title/call, so scroll up to show it. Play/refresh pull
   // the summary pills to the top (with a little breathing room) to frame the rep.
-  const scrollToTop = () => headRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  const focusPills = () => pillsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Deferred two frames so the new title/sub text has re-rendered and the scroll
+  // target's position is measured against the final layout (not the old height).
+  const deferScroll = (el: HTMLElement | null) => {
+    if (!el) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" })));
+  };
+  const scrollToTop = () => deferScroll(headRef.current);
+  const focusPills = () => deferScroll(pillsRef.current);
 
   // Keep local mode in sync if the stored default changes elsewhere.
   useEffect(() => setMode(prefs.fieldView), [prefs.fieldView]);
@@ -359,7 +376,6 @@ function PlayStudyInner({
               <StrategyIcon size={20} />
             </button>
           </div>
-          <FieldCaptionInfo captions={scenario.captions} />
           <FieldViewMenu
             mode={mode}
             onMode={setFieldView}
@@ -466,7 +482,27 @@ function PlayStudyInner({
         <div className="field-column">
           <FieldCaption captions={scenario.captions} />
           {field}
-          <PlaybackScrubber />
+          <PlaybackScrubber
+            captionToggle={
+              isMobile && currentCaption ? (
+                <button
+                  type="button"
+                  className={`caption-info${phase !== "before" ? " pulsing" : ""}${captionOpen ? " open" : ""}`}
+                  data-phase={phase}
+                  aria-expanded={captionOpen}
+                  aria-label="Coaching tip"
+                  onClick={() => setCaptionOpen((o) => !o)}
+                >
+                  <InfoIcon size={16} />
+                </button>
+              ) : undefined
+            }
+          />
+          {isMobile && captionOpen && currentCaption && (
+            <p className="caption-pop" data-phase={phase} role="status" aria-live="polite">
+              {currentCaption.text}
+            </p>
+          )}
           <p className="effort-note">{scenario.effortNote}</p>
           <div className="field-actions">
             <button type="button" className="action-chip" aria-pressed={favorite} onClick={toggleFavorite}>
