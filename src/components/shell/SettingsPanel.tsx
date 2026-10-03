@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppState } from "../../state/AppState";
-import type { FieldView, MotionPref } from "../../state/storage";
+import type { FieldView, MotionPref, ThemePref } from "../../state/storage";
 import { REFERENCES } from "../../data/references";
 
 const MOTION_OPTIONS: { value: MotionPref; label: string }[] = [
   { value: "system", label: "Match my device" },
   { value: "full", label: "Full animation" },
   { value: "reduced", label: "Reduced motion (step through)" },
+];
+
+const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
 ];
 
 const VIEW_OPTIONS: { value: FieldView; label: string }[] = [
@@ -49,6 +54,21 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
             ✕
           </button>
         </div>
+
+        <fieldset className="settings-group">
+          <legend>Appearance</legend>
+          {THEME_OPTIONS.map((o) => (
+            <label key={o.value} className="radio-row">
+              <input
+                type="radio"
+                name="theme"
+                checked={prefs.theme === o.value}
+                onChange={() => setPreference({ theme: o.value })}
+              />
+              <span>{o.label}</span>
+            </label>
+          ))}
+        </fieldset>
 
         <fieldset className="settings-group">
           <legend>Motion</legend>

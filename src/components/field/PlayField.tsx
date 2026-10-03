@@ -58,7 +58,14 @@ export function PlayField({
       <FootballField />
 
       {/* Coverage shading (defensive answer). */}
-      {!hideAnswers && scenario.zone && <CoverageArea zone={scenario.zone} dim={isDim("ss")} showLabel={showLabels} />}
+      {!hideAnswers && scenario.zone && (
+        <CoverageArea
+          zone={scenario.zone}
+          dim={isDim("ss")}
+          showLabel={showLabels}
+          drop={scenario.selection.outcome === "run"}
+        />
+      )}
 
       {/* Assignment arrows: read (yellow) → react (green) for the SS, maroon for
           teammates/receiver routes. Each draws in sync with its player. */}

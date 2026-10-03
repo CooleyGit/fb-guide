@@ -7,6 +7,10 @@ export function CoachingReferences() {
         <strong>Strong Safety · TCU 4-2-5 Defense.</strong> A personal learning guide, not an official team playbook.
         Follow your coaches’ calls, alignment rules, and assignments.
       </p>
+      <p className="footer-orientation">
+        Overhead view · defense on top. Your <strong>right</strong> is screen-left; your <strong>left</strong> is
+        screen-right.
+      </p>
       <details>
         <summary>Coaching references &amp; how to use this guide</summary>
         <ul className="reference-list">

@@ -388,6 +388,10 @@ function buildMotion(
     if (call === "Blitz") addBlitzInside();
     addRunBlocking(sweep);
     addRunFlow();
+    // Zone still shows the curl/flat area pre-snap; it drops as the SS leaves it
+    // to fit the run (CoverageArea fades it on the react phase).
+    const runZone = call === "Zone" ? curlFlatZone(align, sign) : undefined;
+    if (runZone) coachView.coverage = runZone;
     coachView.readKey = { at: { x: key.x, y: key.y }, label: "Read key" };
 
     finish = {
@@ -411,7 +415,7 @@ function buildMotion(
         : "Take a pursuit angle and run to the ball. Never assume someone else makes the tackle.";
     captions.push(base(beforeCap), { phase: "read", text: readCap }, { phase: "react", text: reactCap });
 
-    return { paths, zone: undefined, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions, finish };
+    return { paths, zone: runZone, ballKeyframes, ballFlightFrom, playerKeyframes, coachView, captions, finish };
   }
 
   // ----- pass develops: receiver route + ball flight -----------------------

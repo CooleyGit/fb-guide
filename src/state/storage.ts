@@ -3,6 +3,7 @@ import { isValidSelection } from "./validation";
 
 export type FieldView = "fit" | "detail" | "focus";
 export type MotionPref = "system" | "reduced" | "full";
+export type ThemePref = "light" | "dark";
 
 export interface Favorite {
   id: string;
@@ -15,6 +16,7 @@ export interface Preferences {
   tips: boolean;
   fieldView: FieldView;
   motion: MotionPref;
+  theme: ThemePref;
   coachView: boolean;
   ghost: boolean;
 }
@@ -41,8 +43,9 @@ export const DEFAULT_PREFERENCES: Preferences = {
   tips: true,
   fieldView: "fit",
   motion: "system",
+  theme: "light",
   coachView: false,
-  ghost: false,
+  ghost: true,
 };
 
 export const DEFAULT_PERSISTED: PersistedState = {
@@ -79,6 +82,7 @@ function sanitizePreferences(input: unknown): Preferences {
     motion: MOTION_PREFS.includes(p.motion as MotionPref)
       ? (p.motion as MotionPref)
       : DEFAULT_PREFERENCES.motion,
+    theme: p.theme === "dark" ? "dark" : "light",
     coachView: typeof p.coachView === "boolean" ? p.coachView : DEFAULT_PREFERENCES.coachView,
     ghost: typeof p.ghost === "boolean" ? p.ghost : DEFAULT_PREFERENCES.ghost,
   };

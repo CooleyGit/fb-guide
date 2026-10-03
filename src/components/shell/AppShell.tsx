@@ -4,6 +4,7 @@ import { LearnIcon, PlaysIcon, PracticeIcon, SettingsIcon } from "./icons";
 import { ChevronIcon } from "../plays/icons";
 import { SettingsPanel } from "./SettingsPanel";
 import { CoachingReferences } from "../learn/CoachingReferences";
+import { useAppState } from "../../state/AppState";
 
 const NAV = [
   { to: "/plays", label: "Plays", Icon: PlaysIcon },
@@ -25,10 +26,16 @@ const POSITIONS = [
 
 export function AppShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { state } = useAppState();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const scrollMemory = useRef<Record<string, number>>({});
   const prevPath = useRef<string>(location.pathname);
+
+  // Apply the color theme to the document root.
+  useEffect(() => {
+    document.documentElement.dataset.theme = state.preferences.theme;
+  }, [state.preferences.theme]);
 
   // Remember and restore scroll position per destination.
   useEffect(() => {

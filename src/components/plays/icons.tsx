@@ -216,6 +216,30 @@ export function PlaybookIcon({ size = 18 }: IconProps) {
   );
 }
 
+export function LockIcon({ size = 16 }: IconProps) {
+  // Locked: closed shackle + a solid body (with a cut-out keyhole) so it clearly
+  // reads "locked."
+  return svg(
+    size,
+    <>
+      <path d="M7.5 10 V7 a4.5 4.5 0 0 1 9 0 V10" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="4.5" y="10" width="15" height="10" rx="2" fill="currentColor" stroke="none" />
+      <rect x="11.1" y="13.3" width="1.8" height="4.2" rx="0.9" fill="#fff" stroke="none" />
+    </>,
+  );
+}
+
+export function LockOpenIcon({ size = 16 }: IconProps) {
+  // Unlocked: open shackle + an outline body.
+  return svg(
+    size,
+    <>
+      <path d="M7.5 10 V7 a4.5 4.5 0 0 1 8.6 -1.7" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="4.5" y="10" width="15" height="10" rx="2" strokeWidth="1.8" />
+    </>,
+  );
+}
+
 export function InfoIcon({ size = 18 }: IconProps) {
   return svg(
     size,

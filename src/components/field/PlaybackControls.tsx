@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMotionValueEvent } from "motion/react";
 import type { Caption } from "../../types";
 import { SPEED_OPTIONS, usePlayback } from "../../anim/playback";
@@ -14,15 +14,19 @@ const REFRESH_HOLD_MS = 1000;
 export function FieldTransport({ onRestart, onFocusView }: { onRestart?: () => void; onFocusView?: () => void }) {
   const { progress, isPlaying, play, pause, replay, seek, speed, setSpeed, reduced } = usePlayback();
   const holdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [spinN, setSpinN] = useState(0);
 
-  const clearHold = () => {
+  const clearTimers = () => {
     if (holdRef.current) clearTimeout(holdRef.current);
+    if (scrollRef.current) clearTimeout(scrollRef.current);
     holdRef.current = null;
+    scrollRef.current = null;
   };
-  useEffect(() => clearHold, []);
+  useEffect(() => clearTimers, []);
 
   const onPlay = () => {
-    clearHold();
+    clearTimers();
     if (isPlaying) {
       pause();
       return;
@@ -38,11 +42,12 @@ export function FieldTransport({ onRestart, onFocusView }: { onRestart?: () => v
 
   const onRefresh = () => {
     onRestart?.();
-    onFocusView?.();
     seek(0); // reset to pre-snap and hold a beat on the new call
-    clearHold();
-    if (reduced) return;
-    holdRef.current = setTimeout(() => play(), REFRESH_HOLD_MS);
+    clearTimers();
+    setSpinN((n) => n + 1); // spin the icon while the new text settles
+    // Scroll AFTER the spin so the layout above has stabilized — avoids the jump.
+    scrollRef.current = setTimeout(() => onFocusView?.(), 360);
+    if (!reduced) holdRef.current = setTimeout(() => play(), REFRESH_HOLD_MS);
   };
 
   return (
@@ -56,7 +61,9 @@ export function FieldTransport({ onRestart, onFocusView }: { onRestart?: () => v
         {isPlaying ? <PauseIcon /> : <PlayIcon />}
       </button>
       <button type="button" className="transport-icon" onClick={onRefresh} aria-label="New rep">
-        <ReplayIcon />
+        <span key={spinN} className={`refresh-spin${spinN > 0 ? " spinning" : ""}`}>
+          <ReplayIcon />
+        </span>
       </button>
       {!reduced && (
         <div className="speed-toggle" role="group" aria-label="Playback speed">

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Hotspot, OutcomeId, PassTarget, RunDirection, Scenario, Selection } from "../../types";
 import { deriveScenario } from "../../data/scenario";
 import { CALL_ORDER } from "../../data/calls";
@@ -184,8 +184,19 @@ function PlayStudyInner({
   const [controlsOpen, setControlsOpen] = useState(!isMobile);
   const [notesOpen, setNotesOpen] = useState(true);
   // Mobile coaching tip: a phase-colored info toggle in the phase-chip row that
-  // opens a full-width tip above the effort note; stays locked open until toggled.
-  const [captionOpen, setCaptionOpen] = useState(false);
+  // opens a full-width tip above the effort note. Open by default (passive); the
+  // user can toggle it closed.
+  const [captionOpen, setCaptionOpen] = useState(true);
+  // Lock up to 2 of the 3 dimensions so the shuffle button only reshuffles the
+  // rest. (Applies only to the shuffle button, not manual picks.)
+  const [locks, setLocks] = useState({ call: false, side: false, formation: false });
+  const lockedCount = Number(locks.call) + Number(locks.side) + Number(locks.formation);
+  const toggleLock = (key: "call" | "side" | "formation") =>
+    setLocks((prev) => {
+      const count = Number(prev.call) + Number(prev.side) + Number(prev.formation);
+      if (!prev[key] && count >= 2) return prev; // at most two locked
+      return { ...prev, [key]: !prev[key] };
+    });
   const [toast, showToast] = useToast();
   const currentCaption = scenario.captions.find((c) => c.phase === phase);
   useEffect(() => {
@@ -194,31 +205,28 @@ function PlayStudyInner({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [captionOpen]);
-  // The orientation note shows briefly on load, then fades out.
-  const [viewpointPhase, setViewpointPhase] = useState<"in" | "out" | "gone">("in");
-  useEffect(() => {
-    const t = setTimeout(() => setViewpointPhase("out"), 5000);
-    return () => clearTimeout(t);
-  }, []);
-  useEffect(() => {
-    if (viewpointPhase !== "out") return;
-    const t = setTimeout(() => setViewpointPhase("gone"), 450);
-    return () => clearTimeout(t);
-  }, [viewpointPhase]);
 
-  // Picking an outcome / ball direction / pass target plays the new rep right
-  // away (none of these change the resetKey, so replay isn't cancelled).
+  // Picking an outcome / ball direction / pass target plays the new rep. The
+  // replay is deferred (via a nonce + layout effect) so it fires AFTER the new
+  // scenario has committed — otherwise the first frame can play the old play.
+  const [playNonce, setPlayNonce] = useState(0);
+  const requestPlay = () => setPlayNonce((n) => n + 1);
+  useLayoutEffect(() => {
+    if (playNonce === 0) return;
+    replay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playNonce]);
   const chooseOutcome = (o: OutcomeId) => {
     onChange({ outcome: o });
-    replay();
+    requestPlay();
   };
   const chooseDirection = (d: RunDirection) => {
     setRunDirection(d);
-    replay();
+    requestPlay();
   };
   const choosePassTarget = (t: PassTarget) => {
     setPassTarget(t);
-    replay();
+    requestPlay();
   };
   // The refresh button shuffles a NEW rep: an outcome weighted by this
   // formation's lean (QB keeper rare), plus a fresh ball direction/target. The
@@ -229,12 +237,15 @@ function PlayStudyInner({
     setPassTarget(pick(["curl", "flat", "away"] as const));
     setShoutKey((k) => k + 1);
   };
-  // Shuffle the whole scenario: new call, ball/strength, and formation, with the
-  // outcome weighted by the new formation's lean. It lands pre-snap (paused) so
-  // you can set your eyes, then press play.
+  // Shuffle the scenario, skipping any locked dimensions, with the outcome
+  // weighted by the resulting formation's lean. Lands pre-snap (paused).
   const shuffleSelection = () => {
-    const formation = pick(FORMATION_ORDER);
-    onChange({ call: pick(CALL_ORDER), side: pick(SIDE_ORDER), formation, outcome: rollOutcome(formation) });
+    const patch: Partial<Selection> = {};
+    if (!locks.call) patch.call = pick(CALL_ORDER);
+    if (!locks.side) patch.side = pick(SIDE_ORDER);
+    const formation = locks.formation ? selection.formation : pick(FORMATION_ORDER);
+    if (!locks.formation) patch.formation = formation;
+    onChange({ ...patch, outcome: rollOutcome(formation) });
     setRunDirection(rollDirection());
     setPassTarget(pick(["curl", "flat", "away"] as const));
     setShoutKey((k) => k + 1);
@@ -244,16 +255,19 @@ function PlayStudyInner({
   const pillsRef = useRef<HTMLDivElement>(null);
   const descId = useId();
 
-  // A shuffle changes the title/call, so scroll up to show it. Play/refresh pull
-  // the summary pills to the top (with a little breathing room) to frame the rep.
-  // Deferred two frames so the new title/sub text has re-rendered and the scroll
-  // target's position is measured against the final layout (not the old height).
-  const deferScroll = (el: HTMLElement | null) => {
-    if (!el) return;
-    requestAnimationFrame(() => requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" })));
-  };
-  const scrollToTop = () => deferScroll(headRef.current);
-  const focusPills = () => deferScroll(pillsRef.current);
+  // A shuffle scrolls up to show the new title; play/refresh pull the summary
+  // pills near the top to frame the rep. Requested via a nonce so the scroll runs
+  // in a layout effect AFTER the new title/sub text has committed — otherwise the
+  // changing text height above the target makes it land in the wrong spot.
+  const [scrollReq, setScrollReq] = useState<{ to: "top" | "pills"; n: number } | null>(null);
+  const scrollToTop = () => setScrollReq((r) => ({ to: "top", n: (r?.n ?? 0) + 1 }));
+  const focusPills = () => setScrollReq((r) => ({ to: "pills", n: (r?.n ?? 0) + 1 }));
+  useLayoutEffect(() => {
+    if (!scrollReq) return;
+    const el = scrollReq.to === "top" ? headRef.current : pillsRef.current;
+    const id = requestAnimationFrame(() => el?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    return () => cancelAnimationFrame(id);
+  }, [scrollReq]);
 
   // Keep local mode in sync if the stored default changes elsewhere.
   useEffect(() => setMode(prefs.fieldView), [prefs.fieldView]);
@@ -431,12 +445,6 @@ function PlayStudyInner({
       <p id={descId} className="visually-hidden">
         {scenario.textEquivalent}
       </p>
-      {viewpointPhase !== "gone" && (
-        <div className={`viewpoint-banner${viewpointPhase === "out" ? " out" : ""}`} role="note">
-          Overhead view · defense on top. Your <strong>right</strong> is screen-left; your <strong>left</strong> is
-          screen-right.
-        </div>
-      )}
       <div className="scenario-head" ref={headRef}>
         <h2 className="scenario-title">{scenario.scenarioTitle}</h2>
         <p className="scenario-sub" aria-live="polite">
@@ -469,12 +477,19 @@ function PlayStudyInner({
         >
           <PlaybookIcon size={16} />
           <span className="selection-toggle-text">{controlsOpen ? "Hide selection" : "Change selection"}</span>
+          {lockedCount > 0 && <span className="lock-badge" aria-hidden="true" />}
         </button>
       </div>
 
       {controlsOpen && (
         <div className="controls-region">
-          <PlayControls selection={selection} onChange={onChange} />
+          <PlayControls
+            selection={selection}
+            onChange={onChange}
+            locks={locks}
+            onToggleLock={toggleLock}
+            atLockLimit={lockedCount >= 2}
+          />
         </div>
       )}
 

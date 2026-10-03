@@ -180,13 +180,18 @@ export function CoverageArea({
   zone,
   dim,
   showLabel = true,
+  drop = false,
 }: {
   zone: DerivedZone;
   dim?: boolean;
   showLabel?: boolean;
+  /** On a run, the SS leaves the zone — fade it out during the react phase. */
+  drop?: boolean;
 }) {
+  const { progress } = usePlayback();
+  const opacity = useTransform(progress, drop ? [READ_T, 0.6] : [0, 1], drop ? [1, 0] : [1, 1]);
   return (
-    <g className={`coverage-area${dim ? " dim" : ""}`} aria-hidden="true">
+    <motion.g className={`coverage-area${dim ? " dim" : ""}`} style={{ opacity }} aria-hidden="true">
       <rect
         className="zone"
         x={zone.x * S}
@@ -200,7 +205,7 @@ export function CoverageArea({
           {zone.label}
         </text>
       )}
-    </g>
+    </motion.g>
   );
 }
 
@@ -235,7 +240,9 @@ export function PreSnapRead({ at, label }: { at: Point; label: string }) {
   return (
     <motion.g className="read-hint" transform={`translate(${at.x * S} ${at.y * S})`} style={{ opacity }} aria-hidden="true">
       <circle className="read-hint-ring" cx={0} cy={0} r={34} />
-      <text className="read-hint-label" x={0} y={-62} textAnchor="middle">
+      {/* Label sits on the offensive side (below the key) and renders behind the
+          players, so it tucks under the offense instead of colliding with the DL. */}
+      <text className="read-hint-label" x={0} y={56} textAnchor="middle">
         {label}
       </text>
     </motion.g>

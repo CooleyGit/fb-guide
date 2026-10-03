@@ -31,6 +31,33 @@
   color-scheme: light;
 }
 
+:root[data-theme="dark"] {
+  --maroon: #d85f78;
+  --maroon-dark: #f09ab0;
+  --maroon-tint: #3a2630;
+  --ss: #f5a623;
+  --ss-dark: #ffbe52;
+  --ball: #93a6b4;
+  --run: #e2824f;
+  --run-tint: #3a2a1f;
+  --pass: #6aa0ea;
+  --pass-tint: #1f2b3d;
+  --even: #9aa3ac;
+  --even-tint: #2a2e33;
+  --field: #19211d;
+  --field-line: #2a362f;
+  --field-hash: #46574d;
+  --sideline: #9fb3a8;
+  --ink: #e8edf0;
+  --muted-ink: #9aa6ae;
+  --surface: #1a2026;
+  --surface-2: #242b32;
+  --border: #343d45;
+  --border-strong: #49555e;
+  --page-bg: #0f1317;
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -653,6 +680,7 @@ button {
 .field-caption {
   margin: 0;
   background: #fff5dc;
+  color: #3a2e00; /* stays readable on the light bubble in both themes */
   border-left: 4px solid var(--ss);
   padding: 10px 14px;
   border-radius: 8px;
@@ -733,7 +761,7 @@ button {
   padding: 10px 13px;
   font-size: 14px;
   line-height: 1.4;
-  color: var(--ink);
+  color: #26211c; /* dark text on the light pastel tip in both themes */
   animation: caption-pop-in 0.22s ease-out;
 }
 .caption-pop[data-phase="before"] {
@@ -950,16 +978,18 @@ button {
   right: 10px;
   z-index: 20;
 }
+/* The "After the snap" button stays a plain outline (like the view/settings
+   buttons) and only fills in when open — nudging users to the refresh button to
+   rotate outcomes. The icon still carries the run/pass color. */
 .play-menu-button.outcome-run,
 .play-menu-button.outcome-qb {
-  background: var(--run);
-  border-color: var(--run);
-  color: #fff;
+  color: var(--run);
 }
 .play-menu-button.outcome-pass {
-  background: var(--pass);
-  border-color: var(--pass);
-  color: #fff;
+  color: var(--pass);
+}
+.play-menu-button[aria-expanded="true"] {
+  color: #fff; /* white icon on the maroon open state */
 }
 .play-menu-panel {
   width: auto;
@@ -1156,6 +1186,25 @@ button {
 .transport-icon:hover {
   background: var(--surface-2);
 }
+.refresh-spin {
+  display: inline-flex;
+}
+.refresh-spin.spinning {
+  animation: refresh-spin-once 0.45s ease;
+}
+@keyframes refresh-spin-once {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .refresh-spin.spinning {
+    animation: none;
+  }
+}
 .transport-icon.primary {
   background: var(--maroon);
   color: #fff;
@@ -1256,6 +1305,35 @@ button {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+/* Lock toggle in the top-right of each selector (Assignment / Ball / Formation).
+   Locked dimensions are skipped by the shuffle button. */
+.control-lockable {
+  position: relative;
+}
+.lock-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted-ink);
+  cursor: pointer;
+}
+.lock-toggle.locked {
+  background: transparent;
+  color: var(--maroon);
+}
+.lock-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 .controls-region {
   background: var(--surface-2);
@@ -1420,6 +1498,7 @@ button {
 .outcome-note {
   margin: 0;
   background: #fff5dc;
+  color: #3a2e00; /* readable on the amber note in both themes */
   border-left: 4px solid var(--ss);
   padding: 12px 14px;
   border-radius: 8px;
@@ -1462,6 +1541,7 @@ button {
 }
 .study-prompt {
   background: #fff5dc;
+  color: #3a2e00;
   border-left: 5px solid var(--ss);
 }
 .muted {
@@ -1794,6 +1874,11 @@ details summary {
   font-size: 13px;
   color: var(--muted-ink);
 }
+.footer-orientation {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted-ink);
+}
 .reference-list,
 .scope-list {
   padding-left: 18px;
@@ -1960,6 +2045,7 @@ details summary {
   background: var(--pass);
 }
 .selection-toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1976,6 +2062,27 @@ details summary {
 }
 .selection-toggle:hover {
   background: var(--surface-2);
+}
+/* Clearly "active" while the selection controls are open. */
+.selection-toggle[aria-expanded="true"] {
+  background: var(--maroon);
+  border-color: var(--maroon);
+  color: #fff;
+}
+/* A maroon dot implies something is locked under the selection controls. */
+.lock-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--maroon);
+  border: 2px solid var(--surface);
+}
+.selection-toggle[aria-expanded="true"] .lock-badge {
+  border-color: var(--maroon);
+  background: #fff;
 }
 
 /* Ball & strength hash picker */
